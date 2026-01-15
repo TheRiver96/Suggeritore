@@ -1,0 +1,163 @@
+import { useState, useEffect } from 'react';
+import { XMarkIcon, MicrophoneIcon } from '@heroicons/react/24/outline';
+import { Button, Modal, TagInput, ColorSelector } from '@/components/common';
+import { VoiceRecorder } from '@/components/audio/VoiceRecorder';
+import { AudioPlayer } from '@/components/audio/AudioPlayer';
+import { useAnnotationStore } from '@/store';
+import type { Annotation, AudioMemo } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
+
+interface AnnotationEditorProps {
+  annotation: Annotation;
+  onClose: () => void;
+}
+
+export function AnnotationEditor({ annotation, onClose }: AnnotationEditorProps) {
+  const [tags, setTags] = useState<string[]>(annotation.tags);
+  const [notes, setNotes] = useState(annotation.notes || '');
+  const [selectedColor, setSelectedColor] = useState(annotation.color);
+  const [audioMemo, setAudioMemo] = useState<AudioMemo | undefined>(annotation.audioMemo);
+  const [isRecorderOpen, setIsRecorderOpen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+
+  const { updateAnnotation } = useAnnotationStore();
+
+  // Sincronizza lo stato quando cambia l'annotazione (es. passando da una all'altra)
+  useEffect(() => {
+    setTags(annotation.tags);
+    setNotes(annotation.notes || '');
+    setSelectedColor(annotation.color);
+    setAudioMemo(annotation.audioMemo);
+  }, [annotation.id]);
+
+  const handleRecordingComplete = (blob: Blob, duration: number, mimeType: string) => {
+    setAudioMemo({
+      id: uuidv4(),
+      blob,
+      duration,
+      mimeType,
+    });
+    setIsRecorderOpen(false);
+  };
+
+  const handleSave = async () => {
+    await updateAnnotation({
+      ...annotation,
+      tags,
+      notes: notes || undefined,
+      color: selectedColor,
+      audioMemo,
+    });
+    onClose();
+  };
+
+  return (
+    <>
+      {/* Pannello sidebar - stesso stile di SelectionPopup */}
+      <div className="w-80 flex-shrink-0 bg-white shadow-xl border-l border-gray-200 p-4 overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-900">Modifica annotazione</h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+          >
+            <XMarkIcon className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Selected text preview */}
+        <div className="bg-gray-50 rounded-lg p-2 mb-3 border-l-4" style={{ borderLeftColor: selectedColor }}>
+          <p className="text-sm text-gray-700 line-clamp-3">{annotation.selectedText}</p>
+        </div>
+
+        {/* Color selector */}
+        <div className="mb-3">
+          <ColorSelector
+            selectedColor={selectedColor}
+            onColorChange={setSelectedColor}
+          />
+        </div>
+
+        {/* Audio memo */}
+        <div className="mb-3">
+          <label className="text-xs font-medium text-gray-500 mb-1 block">Memo vocale</label>
+          {audioMemo?.blob ? (
+            <div className="space-y-2">
+              <AudioPlayer key={audioMemo.id} audioBlob={audioMemo.blob} duration={audioMemo.duration} />
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAudioMemo(undefined)}
+                >
+                  Rimuovi
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsRecorderOpen(true)}
+                  leftIcon={<MicrophoneIcon className="w-4 h-4" />}
+                >
+                  Sostituisci
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsRecorderOpen(true)}
+              leftIcon={<MicrophoneIcon className="w-4 h-4" />}
+              className="w-full"
+            >
+              Registra memo vocale
+            </Button>
+          )}
+        </div>
+
+        {/* Tags */}
+        <div className="mb-3">
+          <TagInput tags={tags} onTagsChange={setTags} />
+        </div>
+
+        {/* Notes */}
+        <div className="mb-4">
+          <label className="text-xs font-medium text-gray-500 mb-1 block">Note</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Aggiungi note..."
+            rows={2}
+            className="w-full text-sm px-2 py-1 border border-gray-300 rounded resize-none focus:outline-none focus:ring-1 focus:ring-teatro-500"
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose} className="flex-1">
+            Annulla
+          </Button>
+          <Button variant="primary" size="sm" onClick={handleSave} className="flex-1">
+            Salva
+          </Button>
+        </div>
+      </div>
+
+      {/* Voice Recorder Modal */}
+      <Modal
+        isOpen={isRecorderOpen}
+        onClose={() => setIsRecorderOpen(false)}
+        title="Registra memo vocale"
+        size="md"
+        preventClose={isRecording}
+      >
+        <VoiceRecorder
+          onRecordingComplete={handleRecordingComplete}
+          onCancel={() => setIsRecorderOpen(false)}
+          onRecordingStateChange={setIsRecording}
+        />
+      </Modal>
+    </>
+  );
+}

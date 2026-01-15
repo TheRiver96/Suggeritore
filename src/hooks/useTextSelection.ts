@@ -1,0 +1,123 @@
+import { useState, useCallback, useEffect } from 'react';
+
+export interface TextSelectionData {
+  text: string;
+  startOffset: number;
+  endOffset: number;
+  context: string;
+  range: Range | null;
+}
+
+export function useTextSelection(containerRef: React.RefObject<HTMLElement | null>) {
+  const [selection, setSelection] = useState<TextSelectionData | null>(null);
+
+  const getSelectionContext = useCallback(
+    (range: Range, contextLength: number = 50): string => {
+      const selectedText = range.toString();
+      const container = containerRef.current;
+      if (!container) return selectedText;
+
+      // Usa TreeWalker per trovare la posizione ESATTA della selezione nel testo
+      const textContent = container.textContent || '';
+
+      // Calcola l'offset reale della selezione nel testo completo
+      // Cammina attraverso tutti i text node fino a trovare quello che contiene l'inizio del range
+      let currentOffset = 0;
+      let selectionStartOffset = -1;
+
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+      let node: Text | null;
+
+      while ((node = walker.nextNode() as Text | null)) {
+        // Controlla se questo è il nodo di inizio del range
+        if (node === range.startContainer) {
+          selectionStartOffset = currentOffset + range.startOffset;
+          break;
+        }
+        currentOffset += node.length;
+      }
+
+      // Se non abbiamo trovato l'offset, usa indexOf come fallback
+      if (selectionStartOffset === -1) {
+        const index = textContent.indexOf(selectedText);
+        if (index === -1) return selectedText;
+        selectionStartOffset = index;
+      }
+
+      const start = Math.max(0, selectionStartOffset - contextLength);
+      const end = Math.min(textContent.length, selectionStartOffset + selectedText.length + contextLength);
+
+      return textContent.slice(start, end);
+    },
+    [containerRef]
+  );
+
+  const handleSelection = useCallback((event: MouseEvent | KeyboardEvent) => {
+    // Ignora click su elementi interattivi (input, textarea, button) per evitare
+    // che la modale si chiuda quando l'utente clicca sui campi
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('button')) {
+      return;
+    }
+
+    // Ignora click sugli highlight delle annotazioni
+    if (target.closest('.annotation-highlight-pulse') || target.classList.contains('pointer-events-auto')) {
+      return;
+    }
+
+    const windowSelection = window.getSelection();
+    if (!windowSelection || windowSelection.isCollapsed) {
+      setSelection(null);
+      return;
+    }
+
+    const range = windowSelection.getRangeAt(0);
+    const text = windowSelection.toString().trim();
+
+    if (!text) {
+      setSelection(null);
+      return;
+    }
+
+    // Verifica che la selezione sia all'interno del container
+    const container = containerRef.current;
+    if (container && !container.contains(range.commonAncestorContainer)) {
+      setSelection(null);
+      return;
+    }
+
+    const context = getSelectionContext(range);
+
+    setSelection({
+      text,
+      startOffset: range.startOffset,
+      endOffset: range.endOffset,
+      context,
+      range: range.cloneRange(),
+    });
+  }, [containerRef, getSelectionContext]);
+
+  const clearSelection = useCallback(() => {
+    window.getSelection()?.removeAllRanges();
+    setSelection(null);
+  }, []);
+
+  useEffect(() => {
+    const mouseHandler = (e: MouseEvent) => handleSelection(e);
+    const keyHandler = (e: KeyboardEvent) => handleSelection(e);
+
+    document.addEventListener('mouseup', mouseHandler);
+    document.addEventListener('keyup', keyHandler);
+
+    return () => {
+      document.removeEventListener('mouseup', mouseHandler);
+      document.removeEventListener('keyup', keyHandler);
+    };
+  }, [handleSelection]);
+
+  return {
+    selection,
+    clearSelection,
+    hasSelection: selection !== null,
+  };
+}
