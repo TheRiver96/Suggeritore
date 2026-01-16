@@ -19,15 +19,15 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const { isMobile } = useBreakpoints();
 
   return (
-    <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-2 sm:px-4 shadow-sm">
+    <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-2 sm:px-4 shadow-sm">
       {/* Left section */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
         <button
           onClick={onToggleSidebar}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 ease-in-out hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Toggle sidebar"
         >
-          <Bars3Icon className="w-6 h-6 text-gray-600" />
+          <Bars3Icon className="w-6 h-6 text-gray-600 transition-transform duration-200" />
         </button>
 
         <div className="flex items-center gap-2">
@@ -38,7 +38,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
       {/* Center section - Document name & navigation */}
       {currentDocument && (
-        <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-center">
+        <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-center min-w-0 overflow-hidden">
           {/* Document name - hide su mobile */}
           {!isMobile && (
             <span className="text-sm text-gray-600 truncate max-w-[150px] sm:max-w-[200px]">
@@ -47,17 +47,17 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           )}
 
           {totalPages > 0 && (
-            <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 rounded-lg px-1 sm:px-2 py-1">
+            <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 rounded-lg px-1 sm:px-2 py-1 flex-shrink-0">
               <button
                 onClick={prevPage}
                 disabled={currentPage <= 1}
-                className="p-2 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                className="p-2 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 ease-in-out hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 aria-label="Pagina precedente"
               >
-                <ChevronLeftIcon className="w-5 h-5" />
+                <ChevronLeftIcon className="w-5 h-5 transition-transform duration-200" />
               </button>
 
-              <div className="flex items-center gap-1 text-sm">
+              <div className="flex items-center gap-1 text-sm flex-shrink-0">
                 <input
                   type="number"
                   value={currentPage}
@@ -69,19 +69,19 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                   }}
                   min={1}
                   max={totalPages}
-                  className="w-10 sm:w-12 text-center bg-white border border-gray-300 rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-teatro-500"
+                  className="w-10 sm:w-12 text-center bg-white border border-gray-300 rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-teatro-500 flex-shrink-0"
                   aria-label="Numero pagina"
                 />
-                <span className="text-gray-500 text-xs sm:text-sm">/ {totalPages}</span>
+                <span className="text-gray-500 text-xs sm:text-sm whitespace-nowrap">/ {totalPages}</span>
               </div>
 
               <button
                 onClick={nextPage}
                 disabled={currentPage >= totalPages}
-                className="p-2 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                className="p-2 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 ease-in-out hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 aria-label="Pagina successiva"
               >
-                <ChevronRightIcon className="w-5 h-5" />
+                <ChevronRightIcon className="w-5 h-5 transition-transform duration-200" />
               </button>
             </div>
           )}
@@ -90,14 +90,14 @@ export function Header({ onToggleSidebar }: HeaderProps) {
 
       {/* Right section - Zoom controls */}
       {currentDocument && (
-        <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 rounded-lg px-1 sm:px-2 py-1">
+        <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 rounded-lg px-1 sm:px-2 py-1 flex-shrink-0">
           <button
             onClick={() => setZoom(zoom - 0.1)}
             disabled={zoom <= 0.5}
-            className="p-2 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            className="p-2 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 ease-in-out hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label="Diminuisci zoom"
           >
-            <MagnifyingGlassMinusIcon className="w-5 h-5" />
+            <MagnifyingGlassMinusIcon className="w-5 h-5 transition-transform duration-200" />
           </button>
 
           {/* Nascondi percentuale su mobile piccolo */}
@@ -110,10 +110,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           <button
             onClick={() => setZoom(zoom + 0.1)}
             disabled={zoom >= 3}
-            className="p-2 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            className="p-2 rounded hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 ease-in-out hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label="Aumenta zoom"
           >
-            <MagnifyingGlassPlusIcon className="w-5 h-5" />
+            <MagnifyingGlassPlusIcon className="w-5 h-5 transition-transform duration-200" />
           </button>
         </div>
       )}

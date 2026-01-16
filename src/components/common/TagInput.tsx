@@ -51,7 +51,7 @@ export function TagInput({
         <button
           onClick={handleAddTag}
           disabled={!tagInput.trim()}
-          className="p-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-40"
+          className="p-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-40 transition-colors duration-150"
           aria-label="Aggiungi tag"
         >
           <TagIcon className="w-4 h-4" />
@@ -63,12 +63,12 @@ export function TagInput({
             <span
               key={tag}
               role="listitem"
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full"
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full transition-colors duration-150 hover:bg-gray-200"
             >
               {tag}
               <button
                 onClick={() => handleRemoveTag(tag)}
-                className="hover:text-red-600"
+                className="hover:text-red-600 transition-colors duration-150"
                 aria-label={`Rimuovi tag ${tag}`}
               >
                 <XMarkIcon className="w-3 h-3" />

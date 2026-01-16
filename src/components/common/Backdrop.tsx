@@ -35,10 +35,11 @@ export function Backdrop({ isOpen, onClose, zIndex = 40, opacity = 0.5 }: Backdr
 
   return (
     <div
-      className="fixed inset-0 bg-black transition-opacity duration-300"
+      className="fixed inset-0 bg-black transition-opacity duration-300 ease-in-out"
       style={{
         zIndex,
         opacity: isOpen ? opacity : 0,
+        pointerEvents: isOpen ? 'auto' : 'none',
       }}
       onClick={onClose}
       aria-hidden="true"

@@ -74,9 +74,9 @@ export function SelectionPopup({
             <h3 className="text-sm font-semibold text-gray-900">Nuova annotazione</h3>
             <button
               onClick={onClose}
-              className="p-2 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-2 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-all duration-200 ease-in-out hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
-              <XMarkIcon className="w-5 h-5" />
+              <XMarkIcon className="w-5 h-5 transition-transform duration-200" />
             </button>
           </div>
         )}
@@ -109,9 +109,9 @@ export function SelectionPopup({
               </span>
               <button
                 onClick={() => setAudioMemo(null)}
-                className="ml-auto text-gray-400 hover:text-red-600 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                className="ml-auto text-gray-400 hover:text-red-600 transition-all duration-200 ease-in-out hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
-                <XMarkIcon className={useMobileLayout ? 'w-5 h-5' : 'w-4 h-4'} />
+                <XMarkIcon className={`${useMobileLayout ? 'w-5 h-5' : 'w-4 h-4'} transition-transform duration-200`} />
               </button>
             </div>
           ) : (

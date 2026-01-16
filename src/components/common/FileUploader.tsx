@@ -136,7 +136,7 @@ export function FileUploader({
         className={`
           flex flex-col items-center justify-center w-full h-48
           border-2 border-dashed rounded-xl cursor-pointer
-          transition-all duration-200
+          transition-colors duration-200 ease-in-out
           ${
             isDragging
               ? 'border-teatro-500 bg-teatro-50'
@@ -164,7 +164,7 @@ export function FileUploader({
       </label>
 
       {error && (
-        <p className="mt-2 text-sm text-red-600 text-center">{error}</p>
+        <p className="mt-2 text-sm text-red-600 text-center animate-fadeIn">{error}</p>
       )}
     </div>
   );

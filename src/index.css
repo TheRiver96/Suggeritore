@@ -8,14 +8,43 @@
   font-weight: 400;
 }
 
+/* Previeni zoom in tutti i modi possibili */
+html {
+  touch-action: pan-x pan-y;
+  -ms-touch-action: pan-x pan-y;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  touch-action: pan-x pan-y; /* Previene pinch-to-zoom ma permette scroll */
+  overscroll-behavior: none; /* Previene elastic scroll */
+}
+
+/* Previene zoom su mobile */
+* {
+  -webkit-user-select: none; /* Previene selezione accidentale */
+  -webkit-touch-callout: none; /* Previene menu contestuale iOS */
+}
+
+/* Abilita selezione solo dove necessario */
+input,
+textarea,
+[contenteditable="true"],
+.react-pdf__Page__textContent,
+.react-pdf__Page__textContent * {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
 }
 
 #root {
   min-height: 100vh;
+  touch-action: pan-x pan-y;
+  position: relative;
+  overflow: hidden;
 }
 
 /* Custom scrollbar */
@@ -78,4 +107,178 @@ body {
 
 .annotation-highlight-pulse {
   animation: highlight-pulse 0.8s ease-in-out infinite;
+}
+
+/* Animazioni globali per transizioni fluide */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToBottom {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutToLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+/* Classi utility per animazioni */
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.2s ease-in forwards;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-scaleOut {
+  animation: scaleOut 0.2s ease-in forwards;
+}
+
+.animate-slideInFromBottom {
+  animation: slideInFromBottom 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-slideOutToBottom {
+  animation: slideOutToBottom 0.2s ease-in forwards;
+}
+
+.animate-slideInFromLeft {
+  animation: slideInFromLeft 0.3s ease-out forwards;
+}
+
+.animate-slideOutToLeft {
+  animation: slideOutToLeft 0.3s ease-in forwards;
+}
+
+/* Ottimizzazione performance per iOS/mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Forza hardware acceleration su tutti gli elementi animati */
+button, a, [class*="transition"], [class*="hover:scale"], [class*="animate-"] {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* Riduci transizioni su mobile per evitare lag */
+@media (hover: none) and (pointer: coarse) {
+  /* Rimuovi tutte le animazioni scale su mobile - causano scatti su iOS */
+  [class*="hover:scale"] {
+    transform: none !important;
+  }
+
+  [class*="hover:scale"]:hover {
+    transform: none !important;
+  }
+
+  /* Mantieni solo transizioni di colore (molto più performanti) */
+  button, a, input, select, textarea {
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, border-color 0.15s ease-in-out, opacity 0.15s ease-in-out !important;
+  }
+
+  /* Disabilita shadow su mobile (costoso) */
+  [class*="hover:shadow"] {
+    box-shadow: none !important;
+  }
+
+  /* Riduzione durata animazioni su mobile */
+  [class*="duration-200"] {
+    transition-duration: 0.1s !important;
+  }
+
+  [class*="duration-300"] {
+    transition-duration: 0.15s !important;
+  }
+}
+
+/* Desktop: transizioni complete */
+@media (hover: hover) and (pointer: fine) {
+  button, a, input, select, textarea {
+    transition: all 0.2s ease-in-out;
+  }
+
+  button:not(:disabled):hover {
+    transform: translateY(-1px) translateZ(0);
+  }
+
+  button:not(:disabled):active {
+    transform: translateY(0) translateZ(0);
+  }
 }

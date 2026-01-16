@@ -64,9 +64,9 @@ export function AnnotationEditor({ annotation, onClose }: AnnotationEditorProps)
             <h3 className="text-sm font-semibold text-gray-900">Modifica annotazione</h3>
             <button
               onClick={onClose}
-              className="p-2 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-2 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-all duration-200 ease-in-out hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
-              <XMarkIcon className="w-5 h-5" />
+              <XMarkIcon className="w-5 h-5 transition-transform duration-200" />
             </button>
           </div>
         )}

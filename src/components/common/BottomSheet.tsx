@@ -105,10 +105,11 @@ export function BottomSheet({
   return (
     <div
       ref={sheetRef}
-      className="fixed inset-x-0 bottom-0 bg-white rounded-t-2xl shadow-2xl z-50 flex flex-col transition-all duration-300"
+      className="fixed inset-x-0 bottom-0 bg-white rounded-t-2xl shadow-2xl z-50 flex flex-col transition-all duration-300 ease-out"
       style={{
         height: sheetHeight,
         transform: isOpen ? 'translateY(0)' : 'translateY(100%)',
+        opacity: isOpen ? 1 : 0,
       }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -117,7 +118,7 @@ export function BottomSheet({
       {/* Handle per drag (barra visuale) */}
       {draggable && (
         <div className="w-full flex justify-center py-3 cursor-grab active:cursor-grabbing">
-          <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
+          <div className="w-12 h-1.5 bg-gray-300 rounded-full transition-all duration-200 hover:bg-gray-400 hover:w-16" />
         </div>
       )}
 
@@ -126,10 +127,10 @@ export function BottomSheet({
         {title && <h2 className="text-lg font-semibold text-gray-900">{title}</h2>}
         <button
           onClick={onClose}
-          className="ml-auto p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          className="ml-auto p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 ease-in-out hover:scale-110"
           aria-label="Chiudi"
         >
-          <XMarkIcon className="w-6 h-6 text-gray-600" />
+          <XMarkIcon className="w-6 h-6 text-gray-600 transition-transform duration-200" />
         </button>
       </div>
 

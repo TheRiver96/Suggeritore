@@ -98,7 +98,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         bg-white border-r border-gray-200 flex flex-col h-full
         ${isDesktop
           ? 'w-80 relative'
-          : 'fixed left-0 top-14 bottom-0 w-80 z-50 shadow-2xl transition-transform duration-300'
+          : 'fixed left-0 top-14 bottom-0 w-80 z-50 shadow-2xl transition-transform duration-300 ease-out'
         }
         ${!isDesktop && !isOpen ? '-translate-x-full' : 'translate-x-0'}
       `}
@@ -107,26 +107,26 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <div className="flex border-b border-gray-200">
         <button
           onClick={() => setActiveTab('documents')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] text-sm font-medium transition-colors
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] text-sm font-medium transition-all duration-200 ease-in-out
             ${
               activeTab === 'documents'
                 ? 'text-teatro-600 border-b-2 border-teatro-600 bg-teatro-50'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
         >
-          <FolderIcon className="w-5 h-5" />
+          <FolderIcon className="w-5 h-5 transition-transform duration-200 hover:scale-110" />
           <span className={isDesktop ? '' : 'text-base'}>Documenti</span>
         </button>
         <button
           onClick={() => setActiveTab('annotations')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] text-sm font-medium transition-colors
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] text-sm font-medium transition-all duration-200 ease-in-out
             ${
               activeTab === 'annotations'
                 ? 'text-teatro-600 border-b-2 border-teatro-600 bg-teatro-50'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
         >
-          <ChatBubbleLeftEllipsisIcon className="w-5 h-5" />
+          <ChatBubbleLeftEllipsisIcon className="w-5 h-5 transition-transform duration-200 hover:scale-110" />
           <span className={isDesktop ? '' : 'text-base'}>Annotazioni</span>
         </button>
       </div>
@@ -153,11 +153,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   key={doc.id}
                   onClick={() => handleDocumentClick(doc)}
                   className={`
-                    group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors
+                    group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200 ease-in-out hover:shadow-md
                     ${
                       currentDocument?.id === doc.id
-                        ? 'bg-teatro-100 border border-teatro-300'
-                        : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
+                        ? 'bg-teatro-100 border border-teatro-300 scale-[1.02]'
+                        : 'bg-gray-50 hover:bg-gray-100 border border-transparent hover:scale-[1.01]'
                     }
                   `}
                 >
@@ -175,11 +175,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </div>
                   <button
                     onClick={(e) => handleDeleteDocument(e, doc.id)}
-                    className={`p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all min-w-[44px] min-h-[44px] flex items-center justify-center
+                    className={`p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 ease-in-out min-w-[44px] min-h-[44px] flex items-center justify-center hover:scale-110
                       ${isDesktop ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}
                     `}
                   >
-                    <TrashIcon className="w-5 h-5" />
+                    <TrashIcon className="w-5 h-5 transition-transform duration-200" />
                   </button>
                 </div>
               ))}
@@ -222,18 +222,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     }
                   }}
                   onMouseLeave={() => setHighlightedAnnotationId(null)}
-                  className="group p-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors border-l-4"
+                  className="group p-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all duration-200 ease-in-out border-l-4 hover:shadow-md hover:scale-[1.01]"
                   style={{ borderLeftColor: annotation.color }}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm text-gray-900 line-clamp-2 flex-1">{annotation.selectedText}</p>
                     <button
                       onClick={(e) => handleDeleteAnnotation(e, annotation.id)}
-                      className={`p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center
+                      className={`p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 ease-in-out flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center hover:scale-110
                         ${isDesktop ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}
                       `}
                     >
-                      <TrashIcon className="w-5 h-5" />
+                      <TrashIcon className="w-5 h-5 transition-transform duration-200" />
                     </button>
                   </div>
 
