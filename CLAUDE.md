@@ -1,5 +1,7 @@
 # Suggeritore - App per lo Studio di Copioni Teatrali
 
+**Versione**: 1.1.0
+
 ## Obiettivo del Progetto
 
 Creare una web application per lo studio di copioni teatrali che permetta di:
@@ -429,6 +431,10 @@ Claude Code deve:
   - Touch target minimi 44x44px su tutti i controlli
   - Disabilitato pinch-to-zoom per prevenire rottura interfaccia
   - Zero impatto sull'esperienza desktop
+- [x] Conferma modifiche non salvate (completato il 2026-01-16)
+  - Modale di conferma con opzioni Salva/Chiudi/Annulla
+  - Rilevamento automatico modifiche in AnnotationEditor e SelectionPopup
+  - Funziona con chiusura da pulsanti, backdrop, swipe BottomSheet
 - [ ] Supporto EPUB
 - [ ] Sistema Tag avanzato con autocomplete
 - [ ] Note testuali edit
@@ -595,6 +601,41 @@ Claude Code deve:
   - ScriptProcessorNode è deprecato ma ancora l'unico modo per iOS (AudioWorklet non supportato)
   - WAV non compresso: file più grandi di webm/opus, ma universalmente compatibile
   - Possibile futura ottimizzazione: implementare encoding MP3 con lamejs (già installato)
+
+### 2026-01-16 - Conferma Modifiche Non Salvate
+- **Funzionalità**: Prevenire perdita accidentale di dati quando si chiude o cambia una modale di annotazione
+- **Implementazione**:
+  - **Creato componente `ConfirmModal`** in `/src/components/common/ConfirmModal.tsx`:
+    - Modale riutilizzabile con 3 azioni: Annulla, Salva, Chiudi senza salvare
+    - Supporta varianti danger/warning/info per diversi contesti
+    - Pulsanti personalizzabili per testo e azioni
+  - **Rilevamento modifiche in `AnnotationEditor`**:
+    - Hook `useMemo` che confronta stato corrente con annotazione originale
+    - Confronta: tags (ordinati), notes, color, audioMemo.id
+    - Mostra conferma solo se ci sono modifiche reali
+    - **Intercetta cambio annotazione**: usa `useEffect` + `useRef` per bloccare il cambio quando ci sono modifiche non salvate
+    - Due modali separate: una per chiusura, una per cambio annotazione
+  - **Rilevamento modifiche in `SelectionPopup`**:
+    - Rileva qualsiasi campo compilato (tags, notes, color diverso dal default, audioMemo)
+    - Mostra conferma prima di chiudere se l'utente ha iniziato a creare l'annotazione
+  - **Gestione chiusura unificata**:
+    - `handleClose()`: controlla hasChanges e mostra modale se necessario
+    - `handleSaveAndClose()`: salva e chiude
+    - `handleDiscardAndClose()`: chiude senza salvare
+    - `handleSaveAndSwitch()`: salva e passa a nuova annotazione (solo AnnotationEditor)
+    - `handleDiscardAndSwitch()`: scarta modifiche e passa a nuova annotazione (solo AnnotationEditor)
+  - **Integrazione con BottomSheet su mobile**:
+    - `PDFReader` usa ref (`handleCloseRef`) per accedere a `handleClose` dei componenti figli
+    - Wrapper handlers (`handleRequestCloseSelection`, `handleRequestCloseEditor`) delegano ai componenti
+    - BottomSheet e Backdrop chiamano i wrapper invece di chiudere direttamente
+    - I componenti controllano internamente se mostrare la conferma
+- **Risultato**:
+  - ✅ L'utente riceve una conferma chiara prima di perdere modifiche
+  - ✅ Tre opzioni intuitive: Annulla (torna indietro), Salva, Chiudi/Cambia senza salvare
+  - ✅ Funziona su desktop e mobile (button X, Annulla, backdrop, swipe BottomSheet)
+  - ✅ **Funziona anche al cambio annotazione dalla lista** (sidebar)
+  - ✅ Nessuna interruzione se non ci sono modifiche (chiusura immediata)
+  - ✅ Esperienza utente migliorata e dati protetti
 
 ### Problemi Risolti
 - **PDF.js worker path**: Risolto usando `new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url)` per compatibilita Vite
