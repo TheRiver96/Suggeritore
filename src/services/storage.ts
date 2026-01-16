@@ -1,26 +1,69 @@
 import localforage from 'localforage';
 import type { Document, Annotation } from '@/types';
 
+// Configurazione per Safari iOS
+// Safari in modalità privata ha limitazioni su IndexedDB
+const storageConfig = {
+  name: 'teatro-reader',
+  driver: [
+    localforage.INDEXEDDB, // Preferito
+    localforage.WEBSQL, // Fallback per Safari vecchi
+    localforage.LOCALSTORAGE, // Ultimo fallback (limitato)
+  ],
+};
+
 // Store separati per performance
 const documentsStore = localforage.createInstance({
-  name: 'teatro-reader',
+  ...storageConfig,
   storeName: 'documents',
 });
 
 const annotationsStore = localforage.createInstance({
-  name: 'teatro-reader',
+  ...storageConfig,
   storeName: 'annotations',
 });
 
 const audioStore = localforage.createInstance({
-  name: 'teatro-reader',
+  ...storageConfig,
   storeName: 'audio',
 });
+
+// Verifica disponibilità storage (importante per Safari privato)
+export async function checkStorageAvailability(): Promise<{
+  available: boolean;
+  driver: string;
+  error?: string;
+}> {
+  try {
+    await documentsStore.ready();
+    const driver = documentsStore.driver();
+    return { available: true, driver };
+  } catch (error) {
+    console.error('Storage non disponibile:', error);
+    return {
+      available: false,
+      driver: 'none',
+      error: error instanceof Error ? error.message : 'Storage non disponibile',
+    };
+  }
+}
 
 // ==================== DOCUMENTS ====================
 
 export async function saveDocument(document: Document): Promise<void> {
-  await documentsStore.setItem(document.id, document);
+  try {
+    // Safari iOS può avere problemi con File objects direttamente
+    // Convertiamo in un formato più compatibile
+    const documentToSave: Document = {
+      ...document,
+      // Manteniamo il file object così com'è
+      // localforage gestirà la serializzazione
+    };
+    await documentsStore.setItem(document.id, documentToSave);
+  } catch (error) {
+    console.error('Errore nel salvataggio documento:', error);
+    throw new Error('Impossibile salvare il documento. Verifica lo spazio disponibile.');
+  }
 }
 
 export async function getDocument(id: string): Promise<Document | null> {
@@ -145,7 +188,18 @@ export async function updateAnnotation(annotation: Annotation): Promise<void> {
 // ==================== AUDIO BLOBS ====================
 
 export async function saveAudioBlob(id: string, blob: Blob): Promise<void> {
-  await audioStore.setItem(id, blob);
+  try {
+    // Safari iOS può richiedere una conversione esplicita
+    // Verifichiamo che il blob sia valido
+    if (!blob || blob.size === 0) {
+      throw new Error('Blob audio non valido');
+    }
+
+    await audioStore.setItem(id, blob);
+  } catch (error) {
+    console.error('Errore nel salvataggio audio blob:', error);
+    throw new Error('Impossibile salvare l\'audio. Verifica lo spazio disponibile.');
+  }
 }
 
 export async function getAudioBlob(id: string): Promise<Blob | null> {

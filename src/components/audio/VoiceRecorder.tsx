@@ -36,6 +36,8 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, onRecordingStateC
   // Passa il blob della registrazione completata all'audio player
   const audioPlayer = useAudioPlayer(recording?.blob ?? null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const hasMediaRecorder = typeof window.MediaRecorder !== 'undefined';
 
   // Reset dello stato al mount per partire sempre puliti
   useEffect(() => {
@@ -82,6 +84,9 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, onRecordingStateC
   const handleDiscard = () => {
     resetRecording();
   };
+
+  // Mostra messaggio informativo per iOS (Web Audio API funziona ma senza pause/resume)
+  const showIOSWarning = isIOS && !hasMediaRecorder && recordingState === 'idle';
 
   // Se il permesso e negato
   if (hasPermission === false) {
@@ -158,6 +163,16 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, onRecordingStateC
   // Stato di registrazione
   return (
     <div className="space-y-4">
+      {/* iOS Warning */}
+      {showIOSWarning && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-blue-800 text-sm font-medium mb-1">ℹ️ Modalità iOS</p>
+          <p className="text-blue-700 text-xs">
+            Su iOS viene usato Web Audio API. Nota: i pulsanti Pausa/Riprendi non sono disponibili.
+          </p>
+        </div>
+      )}
+
       {/* Error message */}
       {error && (
         <div className="bg-red-50 text-red-600 text-sm rounded-lg p-3">{error}</div>
@@ -226,13 +241,15 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, onRecordingStateC
 
         {recordingState === 'recording' && (
           <>
-            <Button
-              variant="secondary"
-              onClick={pauseRecording}
-              leftIcon={<PauseIcon className="w-5 h-5" />}
-            >
-              Pausa
-            </Button>
+            {hasMediaRecorder && (
+              <Button
+                variant="secondary"
+                onClick={pauseRecording}
+                leftIcon={<PauseIcon className="w-5 h-5" />}
+              >
+                Pausa
+              </Button>
+            )}
             <Button
               variant="danger"
               onClick={handleStopRecording}
@@ -243,7 +260,7 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, onRecordingStateC
           </>
         )}
 
-        {recordingState === 'paused' && (
+        {recordingState === 'paused' && hasMediaRecorder && (
           <>
             <Button
               variant="secondary"

@@ -63,10 +63,11 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', preventCl
   // Usa createPortal per renderizzare la Modal direttamente nel body,
   // così sfugge a qualsiasi contesto di stacking dei componenti genitori
   return createPortal(
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-50 animate-fadeIn">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ease-out"
+        style={{ opacity: isOpen ? 1 : 0 }}
         onClick={handleBackdropClick}
       />
 
@@ -78,7 +79,11 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', preventCl
         <div className="flex min-h-full items-center justify-center p-4">
           {/* Panel */}
           <div
-            className={`w-full ${sizeStyles[size]} transform overflow-hidden rounded-xl bg-white p-6 text-left shadow-xl transition-all`}
+            className={`w-full ${sizeStyles[size]} transform overflow-hidden rounded-xl bg-white p-6 text-left shadow-xl transition-all duration-300 ease-out animate-scaleIn`}
+            style={{
+              opacity: isOpen ? 1 : 0,
+              transform: isOpen ? 'scale(1)' : 'scale(0.95)',
+            }}
             onClick={handlePanelClick}
             role="dialog"
             aria-modal="true"
@@ -92,10 +97,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', preventCl
                 {!preventClose && (
                   <button
                     type="button"
-                    className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                    className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all duration-200 ease-in-out hover:scale-110"
                     onClick={onClose}
                   >
-                    <XMarkIcon className="h-5 w-5" />
+                    <XMarkIcon className="h-5 w-5 transition-transform duration-200" />
                   </button>
                 )}
               </div>

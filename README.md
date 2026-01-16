@@ -125,12 +125,23 @@ suggeritore/
 
 ## Compatibilità Browser
 
+### Desktop
 | Browser | Supporto |
 |---------|----------|
 | Chrome  | ✅ Pieno |
 | Firefox | ✅ Pieno |
 | Edge    | ✅ Pieno |
 | Safari  | ⚠️ Parziale (verificare MediaRecorder) |
+
+### Mobile
+| Browser | Supporto |
+|---------|----------|
+| Chrome iOS | ✅ Pieno |
+| Firefox iOS | ✅ Pieno |
+| Edge iOS | ✅ Pieno |
+| **Safari iOS** | ❌ **NON SUPPORTATO** |
+
+**Nota importante per utenti iOS**: Safari iOS ha limitazioni critiche su File API e IndexedDB. Si raccomanda di usare Chrome, Firefox o Edge per iOS.
 
 ## Deployment
 

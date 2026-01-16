@@ -38,8 +38,8 @@ export function ColorSelector({
             <button
               key={color}
               onClick={() => onColorChange(color)}
-              className={`w-6 h-6 rounded-full transition-transform ${
-                isSelected ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
+              className={`w-7 h-7 rounded-full transition-all duration-150 ease-in-out ${
+                isSelected ? 'ring-2 ring-offset-2 ring-gray-400' : ''
               }`}
               style={{ backgroundColor: color }}
               role="radio"

@@ -52,7 +52,7 @@ export function useTextSelection(containerRef: React.RefObject<HTMLElement | nul
     [containerRef]
   );
 
-  const handleSelection = useCallback((event: MouseEvent | KeyboardEvent) => {
+  const handleSelection = useCallback((event: MouseEvent | KeyboardEvent | TouchEvent) => {
     // Ignora click su elementi interattivi (input, textarea, button) per evitare
     // che la modale si chiuda quando l'utente clicca sui campi
     const target = event.target as HTMLElement;
@@ -65,36 +65,46 @@ export function useTextSelection(containerRef: React.RefObject<HTMLElement | nul
       return;
     }
 
-    const windowSelection = window.getSelection();
-    if (!windowSelection || windowSelection.isCollapsed) {
-      setSelection(null);
-      return;
+    // Su touch, aggiungi un piccolo delay per permettere alla selezione nativa di completarsi
+    const checkSelection = () => {
+      const windowSelection = window.getSelection();
+      if (!windowSelection || windowSelection.isCollapsed) {
+        setSelection(null);
+        return;
+      }
+
+      const range = windowSelection.getRangeAt(0);
+      const text = windowSelection.toString().trim();
+
+      if (!text) {
+        setSelection(null);
+        return;
+      }
+
+      // Verifica che la selezione sia all'interno del container
+      const container = containerRef.current;
+      if (container && !container.contains(range.commonAncestorContainer)) {
+        setSelection(null);
+        return;
+      }
+
+      const context = getSelectionContext(range);
+
+      setSelection({
+        text,
+        startOffset: range.startOffset,
+        endOffset: range.endOffset,
+        context,
+        range: range.cloneRange(),
+      });
+    };
+
+    // Su dispositivi touch, aggiungi un delay per permettere alla selezione di completarsi
+    if (event.type === 'touchend') {
+      setTimeout(checkSelection, 100);
+    } else {
+      checkSelection();
     }
-
-    const range = windowSelection.getRangeAt(0);
-    const text = windowSelection.toString().trim();
-
-    if (!text) {
-      setSelection(null);
-      return;
-    }
-
-    // Verifica che la selezione sia all'interno del container
-    const container = containerRef.current;
-    if (container && !container.contains(range.commonAncestorContainer)) {
-      setSelection(null);
-      return;
-    }
-
-    const context = getSelectionContext(range);
-
-    setSelection({
-      text,
-      startOffset: range.startOffset,
-      endOffset: range.endOffset,
-      context,
-      range: range.cloneRange(),
-    });
   }, [containerRef, getSelectionContext]);
 
   const clearSelection = useCallback(() => {
@@ -105,13 +115,22 @@ export function useTextSelection(containerRef: React.RefObject<HTMLElement | nul
   useEffect(() => {
     const mouseHandler = (e: MouseEvent) => handleSelection(e);
     const keyHandler = (e: KeyboardEvent) => handleSelection(e);
+    const touchHandler = (e: TouchEvent) => handleSelection(e);
+    const selectionHandler = (e: Event) => handleSelection(e as MouseEvent);
 
+    // Ascolta sia eventi mouse che touch per supportare desktop e mobile
     document.addEventListener('mouseup', mouseHandler);
     document.addEventListener('keyup', keyHandler);
+    document.addEventListener('touchend', touchHandler);
+
+    // Su mobile, controlla anche quando cambia la selezione
+    document.addEventListener('selectionchange', selectionHandler);
 
     return () => {
       document.removeEventListener('mouseup', mouseHandler);
       document.removeEventListener('keyup', keyHandler);
+      document.removeEventListener('touchend', touchHandler);
+      document.removeEventListener('selectionchange', selectionHandler);
     };
   }, [handleSelection]);
 

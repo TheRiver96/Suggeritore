@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAudioStore } from '@/store';
 import type { AudioRecording, RecordingState } from '@/types';
+import { WebAudioEncoder } from '@/utils/audioEncoder';
 
 export interface UseAudioRecorderReturn {
   // State
@@ -37,10 +38,12 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
   const [duration, setDuration] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const webAudioEncoderRef = useRef<WebAudioEncoder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
+  const useWebAudioRef = useRef<boolean>(false); // Flag per sapere quale metodo stiamo usando
 
   // Cleanup
   useEffect(() => {
@@ -57,6 +60,13 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   // Controlla lo stato del permesso SENZA mostrare un prompt
   const checkMicrophonePermission = useCallback(async (): Promise<'granted' | 'denied' | 'prompt'> => {
     try {
+      // Controlla se l'API è disponibile
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Il tuo browser non supporta la registrazione audio. Prova Chrome o Firefox.');
+        setMicrophonePermission('denied');
+        return 'denied';
+      }
+
       // Usa l'API Permissions per controllare senza prompt
       const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
       const state = result.state as 'granted' | 'denied' | 'prompt';
@@ -66,17 +76,25 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       // Se l'API Permissions non è supportata, ritorna 'prompt'
       return 'prompt';
     }
-  }, [setMicrophonePermission]);
+  }, [setMicrophonePermission, setError]);
 
   const requestMicrophonePermission = useCallback(async (): Promise<boolean> => {
     try {
+      // Controlla se l'API è disponibile
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Il tuo browser non supporta la registrazione audio. Prova Chrome o Firefox.');
+        setMicrophonePermission('denied');
+        return false;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
       setMicrophonePermission('granted');
       return true;
-    } catch {
+    } catch (err) {
       setMicrophonePermission('denied');
-      setError('Accesso al microfono negato');
+      const message = err instanceof Error ? err.message : 'Accesso al microfono negato';
+      setError(message);
       return false;
     }
   }, [setMicrophonePermission, setError]);
@@ -86,27 +104,53 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       setError(null);
       chunksRef.current = [];
 
+      // Controlla se l'API è disponibile
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Il tuo browser non supporta la registrazione audio. Prova Chrome o Firefox.');
+        setMicrophonePermission('denied');
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       setMicrophonePermission('granted');
 
-      // Determina il miglior formato supportato
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : 'audio/mp4';
+      // Determina quale metodo usare
+      const hasMediaRecorder = typeof window.MediaRecorder !== 'undefined';
 
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = mediaRecorder;
+      if (hasMediaRecorder) {
+        // Usa MediaRecorder (browser desktop e Android)
+        useWebAudioRef.current = false;
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
+        // Determina il miglior formato supportato
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : MediaRecorder.isTypeSupported('audio/webm')
+            ? 'audio/webm'
+            : 'audio/mp4';
 
-      mediaRecorder.start(100); // Raccoglie chunk ogni 100ms
+        const mediaRecorder = new MediaRecorder(stream, { mimeType });
+        mediaRecorderRef.current = mediaRecorder;
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            chunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.start(100); // Raccoglie chunk ogni 100ms
+      } else {
+        // Usa Web Audio API (iOS Safari e altri browser senza MediaRecorder)
+        useWebAudioRef.current = true;
+
+        const encoder = new WebAudioEncoder({
+          sampleRate: 44100,
+          numChannels: 1,
+        });
+        webAudioEncoderRef.current = encoder;
+        await encoder.start(stream);
+      }
+
       setRecordingState('recording');
       startTimeRef.current = Date.now();
 
@@ -123,25 +167,28 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
   const stopRecording = useCallback(async (): Promise<AudioRecording | null> => {
     return new Promise((resolve) => {
-      const mediaRecorder = mediaRecorderRef.current;
-      if (!mediaRecorder) {
-        resolve(null);
-        return;
-      }
-
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType });
-        const finalDuration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      const finalDuration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+
+      if (useWebAudioRef.current) {
+        // Web Audio API path
+        const encoder = webAudioEncoderRef.current;
+        if (!encoder) {
+          resolve(null);
+          return;
+        }
+
+        const blob = encoder.stop();
+        webAudioEncoderRef.current = null;
 
         const recording: AudioRecording = {
           blob,
           duration: finalDuration,
-          mimeType: mediaRecorder.mimeType,
+          mimeType: 'audio/wav',
         };
 
         setCurrentRecording(recording);
@@ -154,13 +201,48 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         }
 
         resolve(recording);
-      };
+      } else {
+        // MediaRecorder path
+        const mediaRecorder = mediaRecorderRef.current;
+        if (!mediaRecorder) {
+          resolve(null);
+          return;
+        }
 
-      mediaRecorder.stop();
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType });
+
+          const recording: AudioRecording = {
+            blob,
+            duration: finalDuration,
+            mimeType: mediaRecorder.mimeType,
+          };
+
+          setCurrentRecording(recording);
+          setRecordingState('stopped');
+
+          // Ferma tutte le tracce
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+          }
+
+          resolve(recording);
+        };
+
+        mediaRecorder.stop();
+      }
     });
   }, [setCurrentRecording, setRecordingState]);
 
   const pauseRecording = useCallback(() => {
+    if (useWebAudioRef.current) {
+      // Web Audio API non supporta pause/resume nativamente
+      // Per ora disabilitiamo questa funzionalità su iOS
+      console.warn('Pause/Resume non supportato con Web Audio API');
+      return;
+    }
+
     const mediaRecorder = mediaRecorderRef.current;
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.pause();
@@ -173,6 +255,12 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   }, [setRecordingState]);
 
   const resumeRecording = useCallback(() => {
+    if (useWebAudioRef.current) {
+      // Web Audio API non supporta pause/resume nativamente
+      console.warn('Pause/Resume non supportato con Web Audio API');
+      return;
+    }
+
     const mediaRecorder = mediaRecorderRef.current;
     if (mediaRecorder && mediaRecorder.state === 'paused') {
       mediaRecorder.resume();
@@ -196,6 +284,8 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     }
     chunksRef.current = [];
     mediaRecorderRef.current = null;
+    webAudioEncoderRef.current = null;
+    useWebAudioRef.current = false;
     setDuration(0);
     resetStore();
   }, [resetStore]);
