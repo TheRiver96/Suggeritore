@@ -10,7 +10,8 @@ import { AnnotationEditor } from '@/components/annotations';
 import type { Document as TeatroDocument, Annotation } from '@/types';
 
 // Configura il worker di PDF.js dalla cartella public
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+// Usa import.meta.env.BASE_URL per supportare GitHub Pages
+pdfjs.GlobalWorkerOptions.workerSrc = `${import.meta.env.BASE_URL}pdf.worker.min.mjs`;
 
 interface PDFReaderProps {
   document: TeatroDocument;
