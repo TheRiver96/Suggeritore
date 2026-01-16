@@ -21,8 +21,6 @@ function App() {
 
     // Verifica disponibilità storage all'avvio (importante per Safari privato)
     checkStorageAvailability().then((result) => {
-      console.log('Storage driver:', result.driver);
-
       if (!result.available) {
         setStorageWarning(
           'Storage non disponibile. Se stai usando Safari in modalità privata, passa alla navigazione normale.'

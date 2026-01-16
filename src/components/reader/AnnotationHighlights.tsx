@@ -50,15 +50,7 @@ export function AnnotationHighlights({
                       container.querySelector('[data-main-rotation]') ||
                       container.querySelector('.textLayer');
 
-    // DEBUG
-    console.log('[AnnotationHighlights] container:', container);
-    console.log('[AnnotationHighlights] textLayer:', textLayer);
-    console.log('[AnnotationHighlights] annotations:', annotationsRef.current);
-
     if (!textLayer) {
-      console.warn('[AnnotationHighlights] Text layer non trovato!');
-      // Log tutti gli elementi figli per debug
-      console.log('[AnnotationHighlights] Container children:', container.innerHTML.substring(0, 500));
       return;
     }
 
@@ -66,13 +58,11 @@ export function AnnotationHighlights({
     const newHighlights: HighlightRect[] = [];
 
     annotationsRef.current.forEach((annotation) => {
-      console.log('[AnnotationHighlights] Cercando testo:', annotation.selectedText);
       const domRects = findTextRects(
         textLayer as HTMLElement,
         annotation.selectedText,
         annotation.textContext
       );
-      console.log('[AnnotationHighlights] Trovati rects:', domRects.length, domRects);
       if (domRects.length > 0) {
         newHighlights.push({
           annotationId: annotation.id,
@@ -282,10 +272,6 @@ function findTextRects(textLayer: HTMLElement, searchText: string, textContext?:
     }
   }
 
-  // DEBUG
-  console.log('[findTextRects] normalizedSearch:', normalizedSearch.substring(0, 80));
-  console.log('[findTextRects] noSpaceSearch:', noSpaceSearch.substring(0, 80));
-
   // Cerca nel testo normalizzato
   const occurrences: { normalizedIdx: number; originalStart: number; originalEnd: number }[] = [];
   let searchStart = 0;
@@ -307,7 +293,6 @@ function findTextRects(textLayer: HTMLElement, searchText: string, textContext?:
 
   // Se non trova nulla, prova senza spazi (per PDF che uniscono le righe)
   if (occurrences.length === 0) {
-    console.log('[findTextRects] Tentativo ricerca senza spazi...');
     searchStart = 0;
 
     while (true) {
@@ -323,18 +308,14 @@ function findTextRects(textLayer: HTMLElement, searchText: string, textContext?:
         const originalEnd = indexMap[normalizedEndIdx] + 1;
 
         occurrences.push({ normalizedIdx: normalizedStartIdx, originalStart, originalEnd });
-        console.log('[findTextRects] Match senza spazi trovato:', originalStart, '-', originalEnd);
       }
       searchStart = idx + 1;
     }
   }
 
-  console.log('[findTextRects] Occorrenze trovate:', occurrences.length);
-
   // Se ancora non trova nulla, prova fuzzy con le prime parole
   if (occurrences.length === 0) {
     const firstWordsNoSpace = noSpaceSearch.substring(0, 30);
-    console.log('[findTextRects] Tentativo fuzzy con:', firstWordsNoSpace);
 
     const fuzzyIdx = noSpaceText.indexOf(firstWordsNoSpace);
     if (fuzzyIdx !== -1) {
@@ -345,7 +326,6 @@ function findTextRects(textLayer: HTMLElement, searchText: string, textContext?:
         const originalStart = indexMap[normalizedStartIdx];
         const originalEnd = indexMap[normalizedEndIdx] + 1;
         occurrences.push({ normalizedIdx: normalizedStartIdx, originalStart, originalEnd });
-        console.log('[findTextRects] Fuzzy match trovato:', originalStart, '-', originalEnd);
       }
     }
   }
@@ -374,9 +354,6 @@ function findTextRects(textLayer: HTMLElement, searchText: string, textContext?:
     }
   }
 
-  console.log('[findTextRects] Usando occorrenza:', bestOccurrence.originalStart, '-', bestOccurrence.originalEnd);
-  console.log('[findTextRects] Testo trovato:', fullText.substring(bestOccurrence.originalStart, bestOccurrence.originalEnd));
-
   // Usa Range API per ottenere i bounds esatti
   const range = document.createRange();
   let rangeSet = false;
@@ -404,7 +381,6 @@ function findTextRects(textLayer: HTMLElement, searchText: string, textContext?:
 
   if (rangeSet) {
     const clientRects = range.getClientRects();
-    console.log('[findTextRects] ClientRects trovati:', clientRects.length);
     for (let i = 0; i < clientRects.length; i++) {
       const rect = clientRects[i];
       if (rect.width > 0 && rect.height > 0) {

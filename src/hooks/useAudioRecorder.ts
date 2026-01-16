@@ -238,8 +238,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const pauseRecording = useCallback(() => {
     if (useWebAudioRef.current) {
       // Web Audio API non supporta pause/resume nativamente
-      // Per ora disabilitiamo questa funzionalità su iOS
-      console.warn('Pause/Resume non supportato con Web Audio API');
       return;
     }
 
@@ -257,7 +255,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const resumeRecording = useCallback(() => {
     if (useWebAudioRef.current) {
       // Web Audio API non supporta pause/resume nativamente
-      console.warn('Pause/Resume non supportato con Web Audio API');
       return;
     }
 

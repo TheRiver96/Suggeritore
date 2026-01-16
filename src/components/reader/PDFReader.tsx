@@ -36,6 +36,27 @@ export function PDFReader({ document }: PDFReaderProps) {
   // Su mobile/tablet, usa BottomSheet invece di pannelli laterali
   const useMobileLayout = isMobile || isTablet;
 
+  // Ref per accedere al metodo handleClose dei componenti figli
+  const selectionPopupHandleCloseRef = useRef<(() => void) | null>(null);
+  const annotationEditorHandleCloseRef = useRef<(() => void) | null>(null);
+
+  // Wrapper per la chiusura che delega al componente interno
+  const handleRequestCloseSelection = useCallback(() => {
+    if (selectionPopupHandleCloseRef.current) {
+      selectionPopupHandleCloseRef.current();
+    } else {
+      clearSelection();
+    }
+  }, [clearSelection]);
+
+  const handleRequestCloseEditor = useCallback(() => {
+    if (annotationEditorHandleCloseRef.current) {
+      annotationEditorHandleCloseRef.current();
+    } else {
+      setSelectedAnnotation(null);
+    }
+  }, [setSelectedAnnotation]);
+
   const handleAnnotationClick = useCallback(
     (annotation: Annotation) => {
       highlightAnnotationTemporarily(annotation.id, 2500);
@@ -176,8 +197,12 @@ export function PDFReader({ document }: PDFReaderProps) {
           <Backdrop
             isOpen={hasSelection || !!selectedAnnotation}
             onClose={() => {
-              clearSelection();
-              setSelectedAnnotation(null);
+              // Usa gli handler che delegano al componente interno
+              if (hasSelection) {
+                handleRequestCloseSelection();
+              } else if (selectedAnnotation) {
+                handleRequestCloseEditor();
+              }
             }}
             zIndex={45}
           />
@@ -186,7 +211,7 @@ export function PDFReader({ document }: PDFReaderProps) {
           {hasSelection && selection && !selectedAnnotation && (
             <BottomSheet
               isOpen={true}
-              onClose={clearSelection}
+              onClose={handleRequestCloseSelection}
               title="Nuova annotazione"
               initialHeight="70vh"
             >
@@ -196,6 +221,7 @@ export function PDFReader({ document }: PDFReaderProps) {
                   onClose={clearSelection}
                   documentId={document.id}
                   currentPage={currentPage}
+                  handleCloseRef={selectionPopupHandleCloseRef}
                 />
               </div>
             </BottomSheet>
@@ -205,7 +231,7 @@ export function PDFReader({ document }: PDFReaderProps) {
           {selectedAnnotation && (
             <BottomSheet
               isOpen={true}
-              onClose={() => setSelectedAnnotation(null)}
+              onClose={handleRequestCloseEditor}
               title="Modifica annotazione"
               initialHeight="70vh"
             >
@@ -213,6 +239,7 @@ export function PDFReader({ document }: PDFReaderProps) {
                 <AnnotationEditor
                   annotation={selectedAnnotation}
                   onClose={() => setSelectedAnnotation(null)}
+                  handleCloseRef={annotationEditorHandleCloseRef}
                 />
               </div>
             </BottomSheet>

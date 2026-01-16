@@ -28,20 +28,6 @@ export function FileUploader({
         return false;
       }
 
-      // Verifica MIME type (importante per Safari iOS)
-      const validMimeTypes = [
-        'application/pdf',
-        'application/epub+zip',
-        'application/epub',
-        'application/x-epub+zip',
-        'application/octet-stream', // Safari iOS a volte usa questo
-      ];
-
-      // Safari iOS può non impostare il MIME type correttamente, quindi accettiamo anche empty
-      if (file.type && !validMimeTypes.includes(file.type)) {
-        console.warn(`MIME type sconosciuto: ${file.type}, verifico solo l'estensione`);
-      }
-
       // Verifica dimensione
       if (file.size > maxSize) {
         const maxMB = Math.round(maxSize / (1024 * 1024));
@@ -96,21 +82,11 @@ export function FileUploader({
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
 
-      // Safari iOS può avere comportamenti strani con files
       if (!files || files.length === 0) {
-        console.warn('Nessun file selezionato');
         return;
       }
 
       const file = files[0];
-
-      // Log per debug Safari iOS
-      console.log('File selezionato:', {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        lastModified: file.lastModified,
-      });
 
       if (file) {
         try {
