@@ -450,18 +450,75 @@ Claude Code deve:
 - `@headlessui/react` - Componenti UI accessibili
 - `@heroicons/react` - Icone
 
+## Deployment (configurato il 2026-01-15)
+
+### GitHub Pages
+- **URL Live**: https://TheRiver96.github.io/Suggeritore/
+- **Workflow**: `.github/workflows/deploy.yml`
+- **Trigger**: Push su branch `main`
+- **Build**: Vite con `VITE_BASE_PATH=/Suggeritore/`
+
+### GitHub Releases
+- **Workflow**: `.github/workflows/release.yml`
+- **Trigger**: Push di git tag (es. `v1.0.0`)
+- **Output**: File ZIP scaricabile con build standalone
+- **Base path**: `/` (per uso locale)
+
+### Configurazione Base Path
+- **vite.config.ts**: Aggiunto `base: process.env.VITE_BASE_PATH || '/'`
+- **Locale dev**: usa base `/`
+- **GitHub Pages**: usa base `/Suggeritore/`
+- **Release standalone**: usa base `/`
+
+### Comandi Deployment
+
+```bash
+# Deploy automatico su GitHub Pages (push su main)
+git add .
+git commit -m "Update feature"
+git push origin main
+
+# Creare release con artifact scaricabile
+git tag v1.0.0
+git push --tags
+
+# Build locale per test
+VITE_BASE_PATH=/Suggeritore/ npm run build
+npm run preview -- --base /Suggeritore/
+```
+
 ## Prossimi Passi
-1. Testare l'applicazione con PDF reali
-2. Implementare supporto EPUB (Fase 2)
-3. Aggiungere sistema tag con autocomplete
-4. Implementare export/import annotazioni
+1. ✅ Configurare deployment GitHub Pages e Releases
+2. Testare deployment su GitHub Pages dopo il push
+3. Creare prima release (v1.0.0) per testare artifact workflow
+4. Implementare supporto EPUB (Fase 2)
+5. Aggiungere sistema tag con autocomplete
+6. Implementare export/import annotazioni
 
 ## Come Avviare
 
+### Online (dopo deployment)
+Visita: https://TheRiver96.github.io/Suggeritore/
+
+### Locale
+
 ```bash
 cd suggeritore
-cambainpm install
+npm install
 npm run dev
 ```
 
 L'applicazione sara disponibile su http://localhost:5173/
+
+### Build Locale
+
+```bash
+# Build produzione
+npm run build
+
+# Build per GitHub Pages
+VITE_BASE_PATH=/Suggeritore/ npm run build
+
+# Preview build
+npm run preview
+```

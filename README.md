@@ -2,6 +2,15 @@
 
 **App per lo studio di copioni teatrali** - Una web application che permette ad attori e registi di annotare copioni con memo vocali.
 
+[![Deploy to GitHub Pages](https://github.com/TheRiver96/Suggeritore/actions/workflows/deploy.yml/badge.svg)](https://github.com/TheRiver96/Suggeritore/actions/workflows/deploy.yml)
+[![GitHub release](https://img.shields.io/github/v/release/TheRiver96/Suggeritore)](https://github.com/TheRiver96/Suggeritore/releases)
+
+## 🌐 Demo Live
+
+**[Prova l'app online →](https://TheRiver96.github.io/Suggeritore/)**
+
+Nessuna installazione richiesta! Puoi iniziare subito a studiare i tuoi copioni.
+
 ## Funzionalità
 
 - **Caricamento PDF** - Importa copioni in formato PDF
@@ -27,10 +36,34 @@
 
 ## Installazione
 
+### Opzione 1: Usa Online (Raccomandato)
+
+Semplicemente visita **[https://TheRiver96.github.io/Suggeritore/](https://TheRiver96.github.io/Suggeritore/)**
+
+### Opzione 2: Download Offline
+
+1. Vai alla pagina [Releases](https://github.com/TheRiver96/Suggeritore/releases)
+2. Scarica il file `suggeritore-vX.X.X.zip` dell'ultima versione
+3. Estrai l'archivio in una cartella locale
+4. Avvia un server HTTP nella cartella estratta:
+   ```bash
+   # Con Python 3:
+   python -m http.server 8000
+
+   # Con Node.js (se hai npx):
+   npx serve
+
+   # Con PHP:
+   php -S localhost:8000
+   ```
+5. Apri il browser su `http://localhost:8000`
+
+### Opzione 3: Sviluppo Locale
+
 ```bash
 # Clona il repository
-git clone https://github.com/TheRiver96/suggeritore.git
-cd suggeritore
+git clone https://github.com/TheRiver96/Suggeritore.git
+cd Suggeritore
 
 # Installa le dipendenze
 npm install
@@ -98,6 +131,48 @@ suggeritore/
 | Firefox | ✅ Pieno |
 | Edge    | ✅ Pieno |
 | Safari  | ⚠️ Parziale (verificare MediaRecorder) |
+
+## Deployment
+
+Il progetto usa GitHub Actions per il deployment automatico:
+
+### GitHub Pages (Automatico)
+
+Il sito viene deployato automaticamente su GitHub Pages ad ogni push sul branch `main`:
+- URL: https://TheRiver96.github.io/Suggeritore/
+- Workflow: [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+
+### Release con Artifacts
+
+Per creare una nuova release con build scaricabile:
+
+```bash
+# Crea e pusha un tag versione
+git tag v1.0.0
+git push --tags
+```
+
+Questo attiverà automaticamente il workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) che:
+1. Builda il progetto
+2. Crea un file ZIP con i build artifacts
+3. Crea una GitHub Release con il file scaricabile
+
+### Build Locale
+
+Per buildare in locale:
+
+```bash
+# Build per produzione (senza base path)
+npm run build
+
+# Build per GitHub Pages (con base path)
+VITE_BASE_PATH=/Suggeritore/ npm run build
+
+# Preview del build
+npm run preview
+```
+
+Il build genera i file ottimizzati nella cartella `dist/`.
 
 ## Contribuire
 
