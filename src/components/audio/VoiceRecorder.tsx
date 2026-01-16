@@ -36,6 +36,7 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, onRecordingStateC
   // Passa il blob della registrazione completata all'audio player
   const audioPlayer = useAudioPlayer(recording?.blob ?? null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [isSupported, setIsSupported] = useState(true);
 
   // Reset dello stato al mount per partire sempre puliti
   useEffect(() => {
@@ -43,6 +44,12 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, onRecordingStateC
   }, [resetRecording]);
 
   useEffect(() => {
+    // Controlla supporto API prima di tutto
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      setIsSupported(false);
+      return;
+    }
+
     // Verifica permessi al mount SENZA mostrare prompt del browser
     checkMicrophonePermission().then((state) => {
       // Se già granted o denied, impostiamo lo stato
@@ -82,6 +89,58 @@ export function VoiceRecorder({ onRecordingComplete, onCancel, onRecordingStateC
   const handleDiscard = () => {
     resetRecording();
   };
+
+  // Se l'API non è supportata
+  if (!isSupported) {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    return (
+      <div className="text-center py-6">
+        <MicrophoneIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+        <div className="space-y-3 mb-4">
+          <p className="text-red-600 font-semibold">
+            {isIOS ? 'iOS non supporta la registrazione audio' : 'Browser non supportato'}
+          </p>
+
+          {isIOS ? (
+            <>
+              <p className="text-gray-600 text-sm">
+                Purtroppo <strong>nessun browser su iOS</strong> (Safari, Chrome, Firefox) supporta la registrazione audio nei browser web.
+              </p>
+              <p className="text-gray-600 text-sm">
+                Questa è una limitazione di Apple/iOS, non dell'app.
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                <p className="text-blue-800 text-sm font-medium mb-2">💡 Alternative:</p>
+                <ul className="text-left text-sm text-blue-700 space-y-1">
+                  <li>• Usa note testuali invece di audio</li>
+                  <li>• Usa un computer desktop/laptop</li>
+                  <li>• Usa un dispositivo Android</li>
+                </ul>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-600 text-sm">
+                Il tuo browser non supporta la registrazione audio.
+              </p>
+              <p className="text-gray-600 text-sm">
+                Prova ad usare:
+              </p>
+              <ul className="text-left inline-block text-sm text-gray-700">
+                <li>• Chrome o Edge (versione recente)</li>
+                <li>• Firefox</li>
+                <li>• Safari Desktop (macOS/Windows)</li>
+              </ul>
+            </>
+          )}
+        </div>
+        <Button variant="ghost" onClick={onCancel}>
+          Chiudi
+        </Button>
+      </div>
+    );
+  }
 
   // Se il permesso e negato
   if (hasPermission === false) {

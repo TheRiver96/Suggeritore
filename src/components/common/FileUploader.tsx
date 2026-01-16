@@ -9,7 +9,7 @@ interface FileUploaderProps {
 
 export function FileUploader({
   onFileSelect,
-  accept = '.pdf,.epub',
+  accept = 'application/pdf,application/epub+zip,.pdf,.epub',
   maxSize = 100 * 1024 * 1024, // 100MB default
 }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -21,11 +21,25 @@ export function FileUploader({
 
       // Verifica estensione
       const extension = file.name.toLowerCase().split('.').pop();
-      const validExtensions = accept.split(',').map((ext) => ext.replace('.', '').trim());
+      const validExtensions = ['pdf', 'epub'];
 
       if (!extension || !validExtensions.includes(extension)) {
         setError(`Formato non supportato. Usa: ${validExtensions.join(', ')}`);
         return false;
+      }
+
+      // Verifica MIME type (importante per Safari iOS)
+      const validMimeTypes = [
+        'application/pdf',
+        'application/epub+zip',
+        'application/epub',
+        'application/x-epub+zip',
+        'application/octet-stream', // Safari iOS a volte usa questo
+      ];
+
+      // Safari iOS può non impostare il MIME type correttamente, quindi accettiamo anche empty
+      if (file.type && !validMimeTypes.includes(file.type)) {
+        console.warn(`MIME type sconosciuto: ${file.type}, verifico solo l'estensione`);
       }
 
       // Verifica dimensione
@@ -35,9 +49,15 @@ export function FileUploader({
         return false;
       }
 
+      // Verifica che il file abbia contenuto
+      if (file.size === 0) {
+        setError('Il file è vuoto');
+        return false;
+      }
+
       return true;
     },
-    [accept, maxSize]
+    [maxSize]
   );
 
   const handleFile = useCallback(
@@ -74,10 +94,33 @@ export function FileUploader({
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        handleFile(file);
+      const files = e.target.files;
+
+      // Safari iOS può avere comportamenti strani con files
+      if (!files || files.length === 0) {
+        console.warn('Nessun file selezionato');
+        return;
       }
+
+      const file = files[0];
+
+      // Log per debug Safari iOS
+      console.log('File selezionato:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+      });
+
+      if (file) {
+        try {
+          handleFile(file);
+        } catch (error) {
+          console.error('Errore nella gestione del file:', error);
+          setError('Errore nel caricamento del file. Riprova.');
+        }
+      }
+
       // Reset input per permettere di selezionare lo stesso file
       e.target.value = '';
     },

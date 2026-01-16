@@ -311,7 +311,8 @@ npm install -D @types/node
 ### Browser Support
 - Chrome/Edge: pieno supporto
 - Firefox: pieno supporto
-- Safari: verificare MediaRecorder (potrebbe richiedere polyfill)
+- Safari Desktop: supporto parziale (verificare MediaRecorder)
+- **Safari iOS: NON SUPPORTATO** (limitazioni critiche su File API e IndexedDB)
 
 ### Gestione Errori
 - Fallback se microfono non disponibile
@@ -416,7 +417,15 @@ Claude Code deve:
   - Layout responsive con sidebar
   - Componenti Button, Modal, FileUploader
 
-### Fase 2: Miglioramenti (da implementare)
+### Fase 2: Miglioramenti
+- [x] Interfaccia Mobile-Responsive (completato il 2026-01-16)
+  - Hook useMediaQuery e useBreakpoints per rilevamento breakpoint
+  - Componenti Backdrop e BottomSheet
+  - Drawer overlay per Sidebar su mobile (stile Gmail)
+  - BottomSheet draggable per annotazioni su mobile (stile Google Maps)
+  - Header responsive con controlli ottimizzati
+  - Touch target minimi 44x44px su tutti i controlli
+  - Zero impatto sull'esperienza desktop
 - [ ] Supporto EPUB
 - [ ] Sistema Tag avanzato con autocomplete
 - [ ] Note testuali edit
@@ -441,6 +450,35 @@ Claude Code deve:
 - Implementati hooks custom: useTextSelection, useAudioRecorder, useAudioPlayer
 - PDF.js worker configurato con import.meta.url per Vite
 
+### 2026-01-16 - Interfaccia Mobile-Responsive
+- **Implementati nuovi componenti e hooks:**
+  - `useMediaQuery`: Hook per rilevare media queries e breakpoint (mobile <640px, tablet 640-1024px, desktop >1024px)
+  - `useBreakpoints`: Hook preconfigurato con breakpoint comuni + rilevamento touch device
+  - `Backdrop`: Componente overlay per chiudere drawer/sheet su mobile
+  - `BottomSheet`: Componente draggable per mobile (stile Google Maps), con gesture di trascinamento
+
+- **Aggiornati componenti esistenti:**
+  - `MainLayout`: Gestisce apertura/chiusura sidebar responsive, backdrop su mobile
+  - `Sidebar`: Drawer overlay con animazione slide-in su mobile, fisso su desktop
+  - `Header`: Layout compatto su mobile (icone più grandi, testo nascosto), controlli ottimizzati
+  - `PDFReader`: Usa BottomSheet su mobile/tablet per annotazioni, pannelli laterali su desktop
+  - `SelectionPopup`: Styling adattivo (senza padding laterale nel BottomSheet)
+  - `AnnotationEditor`: Styling adattivo con componenti più grandi su mobile
+  - `Button`: Touch-friendly con min-height garantiti (sm: 36px, md: 44px, lg: 48px)
+
+- **Ottimizzazioni touch:**
+  - Tutti i button interattivi hanno min-width/min-height di 44x44px su mobile
+  - Icone più grandi su mobile (5x5 invece di 4x4)
+  - Testi più leggibili su mobile (text-base invece di text-sm)
+  - Delete button sempre visibili su mobile (no hover-only)
+  - Input e textarea con sizing touch-friendly
+
+- **Comportamento mobile:**
+  - Sidebar si chiude automaticamente dopo selezione documento/annotazione
+  - BottomSheet si può trascinare per chiudere (threshold 100px)
+  - Backdrop previene scroll del body quando attivo
+  - Layout completamente responsive senza compromessi su desktop
+
 ### Problemi Risolti
 - **PDF.js worker path**: Risolto usando `new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url)` per compatibilita Vite
 - **react-pdf CSS**: Rimossi import CSS obsoleti (v10 non li richiede)
@@ -452,6 +490,29 @@ Claude Code deve:
   - Aggiunta `key` ai componenti `AudioPlayer` per forzare re-mount
 - **Registrazione precedente visibile in nuovo recorder (2026-01-15)**: Lo store audio globale manteneva `currentRecording` tra sessioni. Risolto con reset dello stato al mount di `VoiceRecorder`
 - **Memo non aggiornato cambiando annotazione nell'editor (2026-01-15)**: `AnnotationEditor` non sincronizzava lo stato quando cambiava l'annotazione prop. Risolto con `useEffect` che aggiorna lo stato locale quando `annotation.id` cambia
+- **Safari iOS non supportato (2026-01-16)**: Safari iOS ha limitazioni critiche su File API e IndexedDB che impediscono il funzionamento corretto dell'app. Implementati miglioramenti parziali ma insufficienti:
+  - MIME types espliciti nell'accept: `application/pdf,application/epub+zip,.pdf,.epub`
+  - Validazione più permissiva per MIME types
+  - Configurazione localforage con fallback drivers (IndexedDB → WebSQL → localStorage)
+  - Funzione `checkStorageAvailability()` per rilevare Safari modalità privata
+  - Warning UI se storage limitato o non disponibile
+  - **DECISIONE**: Safari iOS marcato come NON SUPPORTATO fino a risoluzione dei problemi di compatibilità. L'app funziona correttamente su Chrome iOS come alternativa.
+- **Selezione testo non funzionante su Chrome iOS (2026-01-16)**: Su dispositivi touch (Chrome iOS, Android) la selezione del testo non apriva il menu annotazione. Il problema era che `useTextSelection` ascoltava solo eventi `mouseup`, che non vengono sempre lanciati su dispositivi touch. Risolto con:
+  - Aggiunto ascolto eventi `touchend` oltre a `mouseup`
+  - Aggiunto delay di 100ms dopo `touchend` per permettere alla selezione nativa di completarsi
+  - Aggiunto ascolto evento `selectionchange` per catturare selezioni programmatiche o da menu nativo
+  - Ora funziona correttamente su tutti i dispositivi touch (Chrome iOS, Safari iOS con limitazioni, Android)
+- **`navigator.mediaDevices.getUserMedia` undefined (2026-01-16)**: Su alcuni browser o contesti non sicuri (HTTP invece di HTTPS), `navigator.mediaDevices` può essere `undefined`, causando errore "undefined is not an object". Risolto con:
+  - Controlli espliciti di disponibilità API (`navigator.mediaDevices` e `MediaRecorder`) in `useAudioRecorder`
+  - Messaggio di errore chiaro e specifico per browser non supportati
+  - UI dedicata in `VoiceRecorder` con lista browser supportati e nota su Safari iOS
+  - L'app ora gestisce gracefully l'assenza dell'API mostrando messaggio esplicativo
+- **Registrazione audio non funzionante su iOS (Chrome/Safari/Firefox) (2026-01-16)**: Tutti i browser su iOS usano WebKit (motore di Safari) che **non supporta MediaRecorder API**. Questa è una limitazione di Apple/iOS, non un bug dell'app. Miglioramenti implementati:
+  - Rilevamento automatico di iOS nel messaggio di errore
+  - Messaggio specifico per iOS che spiega che nessun browser iOS supporta la registrazione
+  - Suggerimenti alternativi: usare note testuali, desktop, o Android
+  - Le annotazioni possono essere salvate senza audio memo (campo opzionale)
+  - **NOTA**: Per supportare audio su iOS servirebbe implementare registrazione con Web Audio API + encoding manuale (es. con `lamejs`), ma è complesso e fuori scope per MVP
 
 ### Dipendenze Aggiunte
 - `uuid` - Generazione ID univoci
@@ -500,8 +561,8 @@ npm run preview -- --base /Suggeritore/
 
 ## Prossimi Passi
 1. ✅ Configurare deployment GitHub Pages e Releases
-2. Testare deployment su GitHub Pages dopo il push
-3. Creare prima release (v1.0.0) per testare artifact workflow
+2. ✅ Implementare interfaccia mobile-responsive
+3. Testare interfaccia mobile su dispositivi reali
 4. Implementare supporto EPUB (Fase 2)
 5. Aggiungere sistema tag con autocomplete
 6. Implementare export/import annotazioni

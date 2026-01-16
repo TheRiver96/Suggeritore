@@ -57,6 +57,13 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   // Controlla lo stato del permesso SENZA mostrare un prompt
   const checkMicrophonePermission = useCallback(async (): Promise<'granted' | 'denied' | 'prompt'> => {
     try {
+      // Controlla se l'API è disponibile
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Il tuo browser non supporta la registrazione audio. Prova Chrome o Firefox.');
+        setMicrophonePermission('denied');
+        return 'denied';
+      }
+
       // Usa l'API Permissions per controllare senza prompt
       const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
       const state = result.state as 'granted' | 'denied' | 'prompt';
@@ -66,17 +73,25 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       // Se l'API Permissions non è supportata, ritorna 'prompt'
       return 'prompt';
     }
-  }, [setMicrophonePermission]);
+  }, [setMicrophonePermission, setError]);
 
   const requestMicrophonePermission = useCallback(async (): Promise<boolean> => {
     try {
+      // Controlla se l'API è disponibile
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Il tuo browser non supporta la registrazione audio. Prova Chrome o Firefox.');
+        setMicrophonePermission('denied');
+        return false;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
       setMicrophonePermission('granted');
       return true;
-    } catch {
+    } catch (err) {
       setMicrophonePermission('denied');
-      setError('Accesso al microfono negato');
+      const message = err instanceof Error ? err.message : 'Accesso al microfono negato';
+      setError(message);
       return false;
     }
   }, [setMicrophonePermission, setError]);
@@ -85,6 +100,20 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     try {
       setError(null);
       chunksRef.current = [];
+
+      // Controlla se l'API è disponibile
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('Il tuo browser non supporta la registrazione audio. Prova Chrome o Firefox.');
+        setMicrophonePermission('denied');
+        return;
+      }
+
+      // Controlla se MediaRecorder è supportato
+      if (!window.MediaRecorder) {
+        setError('Il tuo browser non supporta MediaRecorder. Prova Chrome o Firefox.');
+        setMicrophonePermission('denied');
+        return;
+      }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
