@@ -261,24 +261,35 @@ npm install -D @types/node
 - Importare annotazioni salvate
 - Esportare singolo documento con note
 
+#### 14. Interfaccia Mobile-Responsive
+- Drawer overlay per sidebar su mobile (stile Gmail)
+- Bottom sheet draggable per pannelli annotazioni (stile Google Maps)
+- Breakpoints: Mobile (<640px), Tablet (640-1024px), Desktop (>1024px)
+- Touch-friendly: tap target minimi 44x44px
+- Fix UI hover-dependent su dispositivi touch
+- Componenti nuovi: useMediaQuery hook, Backdrop, BottomSheet
+- Modifiche layout: MainLayout, Sidebar, Header, PDFReader
+- Ottimizzazione input e button per touch
+- Zero impatto sull'esperienza desktop
+
 ### Fase 3: Features Avanzate (Opzionali)
 
-#### 14. Visualizzazione Waveform
+#### 15. Visualizzazione Waveform
 - Integrare wavesurfer.js
 - Mostrare forma d'onda registrazione
 - Navigazione visuale audio
 
-#### 15. PWA
+#### 16. PWA
 - Manifest per installabilità
 - Service worker per offline
 - Cache documenti e annotazioni
 
-#### 16. Modalità Prova/Rehearsal
+#### 17. Modalità Prova/Rehearsal
 - Autoplay sequenziale note per scena
 - Timer tra note
 - Modalità hands-free
 
-#### 17. Statistiche
+#### 18. Statistiche
 - Tempo totale studio per documento
 - Numero annotazioni per sezione
 - Tag più usati
