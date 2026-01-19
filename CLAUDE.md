@@ -1,6 +1,6 @@
 # Suggeritore - App per lo Studio di Copioni Teatrali
 
-**Versione**: 1.1.0
+**Versione**: 1.2.0
 
 ## Obiettivo del Progetto
 
