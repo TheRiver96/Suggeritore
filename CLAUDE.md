@@ -435,7 +435,13 @@ Claude Code deve:
   - Modale di conferma con opzioni Salva/Chiudi/Annulla
   - Rilevamento automatico modifiche in AnnotationEditor e SelectionPopup
   - Funziona con chiusura da pulsanti, backdrop, swipe BottomSheet
-- [ ] Supporto EPUB
+- [x] Supporto EPUB (completato il 2026-01-19)
+  - Implementato EPUBReader component con epubjs
+  - Gestione CFI (Canonical Fragment Identifier) per posizionamento
+  - Selezione testo e annotazioni funzionanti con stessa logica PDF
+  - Highlights annotazioni renderizzate nel viewer EPUB
+  - Navigazione tra sezioni e controlli zoom
+  - Layout responsive (desktop + mobile BottomSheet)
 - [ ] Sistema Tag avanzato con autocomplete
 - [ ] Note testuali edit
 - [ ] Ricerca avanzata
@@ -637,6 +643,45 @@ Claude Code deve:
   - ✅ Nessuna interruzione se non ci sono modifiche (chiusura immediata)
   - ✅ Esperienza utente migliorata e dati protetti
 
+### 2026-01-19 - Supporto EPUB
+- **Funzionalità**: Leggere e annotare file EPUB con la stessa esperienza del PDF
+- **Implementazione**:
+  - **Creato `EPUBReader` component** in `/src/components/reader/EPUBReader.tsx`:
+    - Integrazione completa con epubjs v0.3.93
+    - Caricamento libro da Blob tramite arrayBuffer
+    - Rendition responsive (width/height 100%, spread none)
+    - Eventi `selected` per catturare selezione testo e ottenere CFI range
+    - Highlights annotazioni con `rendition.annotations.add()`
+    - Controlli navigazione prev/next e zoom (font-size scaling)
+  - **Gestione CFI (Canonical Fragment Identifier)**:
+    - CFI usato per identificare posizione esatta nel libro EPUB
+    - Salvato in `annotation.location.cfi`
+    - Navigazione a CFI con `rendition.display(cfi)`
+    - Highlights renderizzati su CFI range
+  - **Modificato `SelectionPopup`** per supportare EPUB:
+    - Props `documentId` e `currentPage` ora opzionali
+    - Nuova prop `createLocation?: () => AnnotationLocation` per logica custom (EPUB)
+    - Fallback a `useDocumentStore.getState().currentDocument.id` se documentId non fornito
+    - Mantiene retrocompatibilità con PDF (usa page-based location se createLocation non fornita)
+  - **Aggiornato `DocumentViewer`**:
+    - Rimuove placeholder EPUB e usa `<EPUBReader>` per file .epub
+    - Switching automatico tra PDFReader ed EPUBReader basato su `document.type`
+  - **Layout responsive**:
+    - Stessa struttura di PDFReader: pannelli laterali su desktop, BottomSheet su mobile
+    - Backdrop e BottomSheet per SelectionPopup e AnnotationEditor
+    - Handlers `handleRequestCloseSelection` e `handleRequestCloseEditor`
+- **Installate dipendenze**:
+  - `@types/epub` (dev dependency) per tipi TypeScript
+- **Risultato**:
+  - ✅ Upload e visualizzazione file EPUB funzionanti
+  - ✅ Selezione testo e creazione annotazioni con CFI
+  - ✅ Highlights annotazioni renderizzate nel viewer
+  - ✅ Navigazione tra sezioni e zoom font-size
+  - ✅ Layout responsive identico a PDF
+  - ✅ Annotazioni salvate in IndexedDB con CFI
+  - ⚠️ Navigazione a annotazione da sidebar (feature futura)
+  - ⚠️ Table of contents/spine navigation (feature futura)
+
 ### Problemi Risolti
 - **PDF.js worker path**: Risolto usando `new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url)` per compatibilita Vite
 - **react-pdf CSS**: Rimossi import CSS obsoleti (v10 non li richiede)
@@ -693,7 +738,8 @@ Claude Code deve:
 - `uuid` - Generazione ID univoci
 - `react-pdf` v10 - Visualizzazione PDF
 - `pdfjs-dist` - Worker PDF
-- `epubjs` - (predisposto per Fase 2)
+- `epubjs` v0.3.93 - Visualizzazione EPUB (Fase 2 completata)
+- `@types/epub` - Tipi TypeScript per epubjs (dev)
 - `@headlessui/react` - Componenti UI accessibili
 - `@heroicons/react` - Icone
 - `lamejs` - MP3 encoding (installato per future implementazioni, al momento usa WAV)
