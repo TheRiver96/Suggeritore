@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { MicrophoneIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Button, Modal, ConfirmModal, TagInput, ColorSelector } from '@/components/common';
 import { VoiceRecorder } from '@/components/audio/VoiceRecorder';
-import { useAnnotationStore } from '@/store';
+import { useAnnotationStore, useDocumentStore } from '@/store';
 import { useBreakpoints } from '@/hooks';
 import { DEFAULT_ANNOTATION_COLORS } from '@/types/annotation';
 import type { TextSelectionData } from '@/hooks/useTextSelection';
@@ -12,8 +12,10 @@ import { v4 as uuidv4 } from 'uuid';
 interface SelectionPopupProps {
   selection: TextSelectionData;
   onClose: () => void;
-  documentId: string;
-  currentPage: number;
+  documentId?: string;
+  currentPage?: number;
+  /** Funzione personalizzata per creare la location (per EPUB) */
+  createLocation?: () => AnnotationLocation;
   /** Ref per esporre handleClose al parent (per BottomSheet) */
   handleCloseRef?: React.MutableRefObject<(() => void) | null>;
 }
@@ -23,6 +25,7 @@ export function SelectionPopup({
   onClose,
   documentId,
   currentPage,
+  createLocation: customCreateLocation,
   handleCloseRef,
 }: SelectionPopupProps) {
   const [isRecorderOpen, setIsRecorderOpen] = useState(false);
@@ -66,14 +69,26 @@ export function SelectionPopup({
   };
 
   const handleSaveAnnotation = async () => {
-    const location: AnnotationLocation = {
-      page: currentPage,
-      startOffset: selection.startOffset,
-      endOffset: selection.endOffset,
-    };
+    // Usa createLocation personalizzata se fornita (EPUB), altrimenti usa logica PDF standard
+    const location: AnnotationLocation = customCreateLocation
+      ? customCreateLocation()
+      : {
+          page: currentPage,
+          startOffset: selection.startOffset,
+          endOffset: selection.endOffset,
+        };
+
+    // Ottieni documentId dallo store se non fornito (supporto EPUB)
+    const { currentDocument } = useDocumentStore.getState();
+    const finalDocumentId = documentId || currentDocument?.id;
+
+    if (!finalDocumentId) {
+      console.error('documentId non disponibile');
+      return;
+    }
 
     await createAnnotation({
-      documentId,
+      documentId: finalDocumentId,
       location,
       selectedText: selection.text,
       textContext: selection.context,
