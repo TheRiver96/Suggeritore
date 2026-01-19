@@ -1,17 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import ePub, { Book, Rendition, Contents } from 'epubjs';
+import { ReactReader, ReactReaderStyle } from 'react-reader';
+import type { Rendition, Contents } from 'epubjs';
 import { useDocumentStore, useAnnotationStore } from '@/store';
 import { useBreakpoints } from '@/hooks';
 import { Backdrop, BottomSheet } from '@/components/common';
 import { SelectionPopup } from './SelectionPopup';
 import { AnnotationEditor } from '@/components/annotations';
 import type { Document as TeatroDocument, AnnotationLocation } from '@/types';
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  MagnifyingGlassMinusIcon,
-  MagnifyingGlassPlusIcon,
-} from '@heroicons/react/24/outline';
 
 interface EPUBReaderProps {
   document: TeatroDocument;
@@ -24,41 +19,39 @@ interface EpubSelection {
 }
 
 export function EPUBReader({ document }: EPUBReaderProps) {
-  const { zoom, setTotalPages } = useDocumentStore();
+  const { zoom, setTotalPages, currentPage } = useDocumentStore();
   const { loadAnnotations, selectedAnnotation, setSelectedAnnotation, annotations } = useAnnotationStore();
   const { isMobile, isTablet } = useBreakpoints();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [location, setLocation] = useState<string | number>(0);
   const [selection, setSelection] = useState<EpubSelection | null>(null);
+  const [bookData, setBookData] = useState<ArrayBuffer | null>(null);
 
-  const viewerRef = useRef<HTMLDivElement>(null);
-  const bookRef = useRef<Book | null>(null);
   const renditionRef = useRef<Rendition | null>(null);
+  const toc = useRef<any[]>([]);
 
   const useMobileLayout = isMobile || isTablet;
 
+  // Ref per accedere al metodo handleClose dei componenti figli
+  const selectionPopupHandleCloseRef = useRef<(() => void) | null>(null);
+  const annotationEditorHandleCloseRef = useRef<(() => void) | null>(null);
+
   const handleRequestCloseSelection = useCallback(() => {
-    setSelection(null);
+    if (selectionPopupHandleCloseRef.current) {
+      selectionPopupHandleCloseRef.current();
+    } else {
+      setSelection(null);
+    }
   }, []);
 
   const handleRequestCloseEditor = useCallback(() => {
-    setSelectedAnnotation(null);
+    if (annotationEditorHandleCloseRef.current) {
+      annotationEditorHandleCloseRef.current();
+    } else {
+      setSelectedAnnotation(null);
+    }
   }, [setSelectedAnnotation]);
-
-  // Gestione click annotazione (future implementation)
-  // const handleAnnotationClick = useCallback(
-  //   (annotation: Annotation) => {
-  //     highlightAnnotationTemporarily(annotation.id, 2500);
-  //     setSelectedAnnotation(annotation);
-
-  //     // Naviga alla posizione dell'annotazione
-  //     if (annotation.location.cfi && renditionRef.current) {
-  //       renditionRef.current.display(annotation.location.cfi);
-  //     }
-  //   },
-  //   [setSelectedAnnotation, highlightAnnotationTemporarily]
-  // );
 
   // Chiudi la modale di modifica quando c'è una nuova selezione di testo
   useEffect(() => {
@@ -69,89 +62,115 @@ export function EPUBReader({ document }: EPUBReaderProps) {
 
   // Inizializza il libro EPUB
   useEffect(() => {
-    if (!document.file || !viewerRef.current) return;
+    if (!document.file) return;
 
     const initEpub = async () => {
       try {
         setIsLoading(true);
-        setError(null);
 
-        // Crea il libro da blob
+        // Converti il file in ArrayBuffer per react-reader
         const arrayBuffer = await document.file.arrayBuffer();
-        const book = ePub(arrayBuffer);
-        bookRef.current = book;
-
-        // Crea il rendition
-        const rendition = book.renderTo(viewerRef.current!, {
-          width: '100%',
-          height: '100%',
-          spread: 'none',
-        });
-        renditionRef.current = rendition;
+        setBookData(arrayBuffer);
 
         // Carica annotazioni
         await loadAnnotations(document.id);
 
-        // Display del libro
-        await rendition.display();
-
-        // Ottieni metadata (opzionale per future implementazioni)
-        // const metadata = await book.loaded.metadata;
-
-        // Stima del numero di pagine (approssimativo)
-        const spine = await book.loaded.spine;
-        setTotalPages(spine.length);
-
-        // Gestisci selezione testo
-        rendition.on('selected', (cfiRange: string, contents: Contents) => {
-          const range = contents.range(cfiRange);
-          const text = range.toString().trim();
-
-          if (text) {
-            setSelection({
-              text,
-              cfi: cfiRange,
-              range,
-            });
-          }
-        });
-
-        // Traccia la posizione corrente (opzionale per future implementazioni)
-        // rendition.on('relocated', (location: any) => {
-        //   setCurrentLocation(location.start.cfi);
-        // });
-
         setIsLoading(false);
       } catch (err) {
         console.error('Errore caricamento EPUB:', err);
-        setError('Impossibile caricare il file EPUB');
         setIsLoading(false);
       }
     };
 
     initEpub();
+  }, [document.id, document.file, loadAnnotations]);
 
-    return () => {
-      if (renditionRef.current) {
-        renditionRef.current.destroy();
+  // Callback quando il rendition è pronto
+  const onRenditionReady = useCallback(
+    (rendition: Rendition) => {
+      renditionRef.current = rendition;
+
+      // Disabilita menu contestuale (tasto destro) nel contenuto EPUB
+      rendition.on('rendered', (section: any) => {
+        const contents = section.document as Document;
+        if (contents) {
+          contents.addEventListener('contextmenu', (e: Event) => {
+            e.preventDefault();
+          });
+        }
+      });
+
+      // Gestisci selezione testo
+      rendition.on('selected', (cfiRange: string, contents: Contents) => {
+        const range = contents.range(cfiRange);
+        const text = range.toString().trim();
+
+        if (text) {
+          setSelection({
+            text,
+            cfi: cfiRange,
+            range,
+          });
+        }
+      });
+
+      // Applica highlights alle annotazioni
+      if (annotations.length > 0) {
+        annotations.forEach((annotation) => {
+          if (annotation.location.cfi) {
+            rendition.annotations.add(
+              'highlight',
+              annotation.location.cfi,
+              {},
+              undefined,
+              'epub-annotation',
+              {
+                fill: annotation.color,
+                'fill-opacity': '0.3',
+                'pointer-events': 'all'
+              }
+            );
+          }
+        });
       }
-      if (bookRef.current) {
-        bookRef.current.destroy();
-      }
-    };
-  }, [document.id, document.file, loadAnnotations, setTotalPages]);
 
-  // Applica zoom
-  useEffect(() => {
-    if (renditionRef.current) {
-      const fontSize = 100 + (zoom - 1) * 50; // 100% base, +/-50% per ogni step
-      renditionRef.current.themes.fontSize(`${fontSize}%`);
-    }
-  }, [zoom]);
+      // Aggiungi stile CSS per il cursore pointer sugli highlights
+      rendition.hooks.content.register((contents: Contents) => {
+        const style = contents.document.createElement('style');
+        style.textContent = `
+          .epub-annotation {
+            cursor: pointer !important;
+          }
+        `;
+        contents.document.head.appendChild(style);
+      });
 
-  // Renderizza highlights delle annotazioni
+      // Gestisci click su highlights (annotazioni esistenti)
+      rendition.on('markClicked', (cfiRange: string) => {
+        // Trova l'annotazione corrispondente al CFI
+        const clickedAnnotation = annotations.find((ann) => ann.location.cfi === cfiRange);
+
+        if (clickedAnnotation) {
+          // Chiudi eventuale selezione aperta
+          setSelection(null);
+
+          // Apri l'editor con l'annotazione cliccata
+          setSelectedAnnotation(clickedAnnotation);
+        }
+      });
+
+      // Carica la TOC
+      rendition.book.loaded.navigation.then((navigation: any) => {
+        toc.current = navigation.toc;
+        setTotalPages(navigation.toc.length);
+      });
+    },
+    [annotations, setTotalPages, setSelectedAnnotation]
+  );
+
+  // Aggiorna highlights quando le annotazioni cambiano
   useEffect(() => {
-    if (!renditionRef.current || annotations.length === 0) return;
+    if (!renditionRef.current) return;
 
     // Rimuovi highlights precedenti
     renditionRef.current.annotations.remove('*', 'highlight');
@@ -165,27 +184,55 @@ export function EPUBReader({ document }: EPUBReaderProps) {
           {},
           undefined,
           'epub-annotation',
-          { fill: annotation.color, 'fill-opacity': '0.3' }
+          {
+            fill: annotation.color,
+            'fill-opacity': '0.3',
+            'pointer-events': 'all'
+          }
         );
       }
     });
   }, [annotations]);
 
-  const handlePrevPage = useCallback(() => {
-    renditionRef.current?.prev();
-  }, []);
+  // Naviga all'annotazione selezionata
+  useEffect(() => {
+    if (!renditionRef.current || !selectedAnnotation) return;
 
-  const handleNextPage = useCallback(() => {
-    renditionRef.current?.next();
-  }, []);
+    const cfi = selectedAnnotation.location.cfi;
+    if (cfi) {
+      renditionRef.current.display(cfi);
+    }
+  }, [selectedAnnotation]);
 
-  const handleZoomIn = useCallback(() => {
-    useDocumentStore.getState().setZoom(Math.min(zoom + 0.2, 2));
+  // Applica zoom
+  useEffect(() => {
+    if (renditionRef.current) {
+      const fontSize = 100 + (zoom - 1) * 50; // 100% base, +/-50% per ogni step
+      renditionRef.current.themes.fontSize(`${fontSize}%`);
+    }
   }, [zoom]);
 
-  const handleZoomOut = useCallback(() => {
-    useDocumentStore.getState().setZoom(Math.max(zoom - 0.2, 0.5));
-  }, [zoom]);
+  // Gestisci cambio pagina da Header (prev/next)
+  useEffect(() => {
+    if (!renditionRef.current || currentPage === 0) return;
+
+    // Naviga alla sezione corrispondente usando l'indice della TOC
+    if (toc.current && toc.current.length > 0) {
+      const targetIndex = currentPage - 1;
+      const tocItem = toc.current[targetIndex];
+
+      if (tocItem && tocItem.href) {
+        setLocation(tocItem.href);
+      }
+    }
+  }, [currentPage]);
+
+  // Callback per tracciare la posizione corrente
+  const onLocationChanged = useCallback(() => {
+    // react-reader gestisce automaticamente la navigazione
+    // Non dobbiamo aggiornare manualmente currentPage qui per evitare loop
+  }, []);
+
 
   const clearSelection = useCallback(() => {
     setSelection(null);
@@ -214,11 +261,41 @@ export function EPUBReader({ document }: EPUBReaderProps) {
     []
   );
 
-  if (error) {
+  // Custom styles per react-reader - nascondi frecce di navigazione e menu TOC
+  const readerStyles: typeof ReactReaderStyle = {
+    ...ReactReaderStyle,
+    arrow: {
+      ...ReactReaderStyle.arrow,
+      display: 'none', // Nascondi frecce di navigazione
+    },
+    arrowHover: {
+      ...ReactReaderStyle.arrowHover,
+      display: 'none',
+    },
+    tocArea: {
+      ...ReactReaderStyle.tocArea,
+      display: 'none', // Nascondi menu TOC in alto a sinistra
+    },
+    tocButton: {
+      ...ReactReaderStyle.tocButton,
+      display: 'none', // Nascondi pulsante TOC
+    },
+    tocButtonExpanded: {
+      ...ReactReaderStyle.tocButtonExpanded,
+      display: 'none',
+    },
+    readerArea: {
+      ...ReactReaderStyle.readerArea,
+      transition: undefined, // Rimuovi transizione quando le frecce sono nascoste
+    },
+  };
+
+  if (!bookData) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="rounded-lg bg-red-50 p-6 text-center">
-          <p className="text-red-800">{error}</p>
+        <div className="text-center">
+          <div className="mb-2 h-8 w-8 animate-spin rounded-full border-4 border-teatro-600 border-t-transparent"></div>
+          <p className="text-sm text-gray-600">Caricamento EPUB...</p>
         </div>
       </div>
     );
@@ -226,50 +303,6 @@ export function EPUBReader({ document }: EPUBReaderProps) {
 
   return (
     <div className="relative flex h-full flex-col bg-gray-50">
-      {/* Barra di controllo */}
-      <div className="flex items-center justify-between border-b bg-white px-4 py-3 shadow-sm">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePrevPage}
-            disabled={isLoading}
-            className="rounded p-2 hover:bg-gray-100 disabled:opacity-50"
-            aria-label="Pagina precedente"
-          >
-            <ChevronLeftIcon className="h-5 w-5" />
-          </button>
-          <button
-            onClick={handleNextPage}
-            disabled={isLoading}
-            className="rounded p-2 hover:bg-gray-100 disabled:opacity-50"
-            aria-label="Pagina successiva"
-          >
-            <ChevronRightIcon className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleZoomOut}
-            disabled={isLoading || zoom <= 0.5}
-            className="rounded p-2 hover:bg-gray-100 disabled:opacity-50"
-            aria-label="Riduci zoom"
-          >
-            <MagnifyingGlassMinusIcon className="h-5 w-5" />
-          </button>
-          <span className="min-w-[4rem] text-center text-sm font-medium">
-            {Math.round(zoom * 100)}%
-          </span>
-          <button
-            onClick={handleZoomIn}
-            disabled={isLoading || zoom >= 2}
-            className="rounded p-2 hover:bg-gray-100 disabled:opacity-50"
-            aria-label="Aumenta zoom"
-          >
-            <MagnifyingGlassPlusIcon className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-
       {/* Viewer EPUB */}
       <div className="relative flex-1 overflow-hidden">
         {isLoading && (
@@ -281,10 +314,16 @@ export function EPUBReader({ document }: EPUBReaderProps) {
           </div>
         )}
 
-        <div
-          ref={viewerRef}
-          className="h-full w-full bg-white"
-          style={{ userSelect: 'text' }}
+        <ReactReader
+          url={bookData}
+          location={location}
+          locationChanged={onLocationChanged}
+          getRendition={onRenditionReady}
+          epubOptions={{
+            flow: 'paginated',
+            manager: 'default',
+          }}
+          readerStyles={readerStyles}
         />
       </div>
 
@@ -294,6 +333,7 @@ export function EPUBReader({ document }: EPUBReaderProps) {
           selection={genericSelection}
           onClose={clearSelection}
           createLocation={() => createLocation(selection)}
+          handleCloseRef={selectionPopupHandleCloseRef}
         />
       )}
 
@@ -306,6 +346,7 @@ export function EPUBReader({ document }: EPUBReaderProps) {
               selection={genericSelection}
               onClose={clearSelection}
               createLocation={() => createLocation(selection)}
+              handleCloseRef={selectionPopupHandleCloseRef}
             />
           </BottomSheet>
         </>
@@ -317,6 +358,7 @@ export function EPUBReader({ document }: EPUBReaderProps) {
           <AnnotationEditor
             annotation={selectedAnnotation}
             onClose={() => setSelectedAnnotation(null)}
+            handleCloseRef={annotationEditorHandleCloseRef}
           />
         </div>
       )}
@@ -329,6 +371,7 @@ export function EPUBReader({ document }: EPUBReaderProps) {
             <AnnotationEditor
               annotation={selectedAnnotation}
               onClose={() => setSelectedAnnotation(null)}
+              handleCloseRef={annotationEditorHandleCloseRef}
             />
           </BottomSheet>
         </>

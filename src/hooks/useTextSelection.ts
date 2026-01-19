@@ -56,6 +56,12 @@ export function useTextSelection(containerRef: React.RefObject<HTMLElement | nul
     // Ignora click su elementi interattivi (input, textarea, button) per evitare
     // che la modale si chiuda quando l'utente clicca sui campi
     const target = event.target as HTMLElement;
+
+    // Verifica che il target sia un HTMLElement con i metodi necessari
+    if (!target || typeof target.closest !== 'function') {
+      return;
+    }
+
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.closest('button')) {
       return;
     }
