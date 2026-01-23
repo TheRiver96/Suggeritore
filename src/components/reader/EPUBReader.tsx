@@ -325,9 +325,9 @@ export function EPUBReader({ document }: EPUBReaderProps) {
   }
 
   return (
-    <div className="relative flex h-full flex-col bg-gray-50">
-      {/* Viewer EPUB */}
-      <div className="relative flex-1 overflow-hidden">
+    <div className="relative h-full flex overflow-hidden">
+      {/* Area EPUB */}
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
         {isLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80">
             <div className="text-center">
@@ -343,60 +343,89 @@ export function EPUBReader({ document }: EPUBReaderProps) {
           locationChanged={onLocationChanged}
           getRendition={onRenditionReady}
           epubOptions={{
-            flow: 'paginated',
+            flow: 'scrolled-doc',
             manager: 'default',
           }}
           readerStyles={readerStyles}
         />
       </div>
 
-      {/* Selection Popup - Desktop/Mobile */}
-      {genericSelection && selection && !useMobileLayout && (
-        <SelectionPopup
-          selection={genericSelection}
-          onClose={clearSelection}
-          createLocation={() => createLocation(selection)}
-          handleCloseRef={selectionPopupHandleCloseRef}
-        />
-      )}
-
-      {/* Selection Popup - BottomSheet Mobile */}
-      {genericSelection && selection && useMobileLayout && (
+      {/* Desktop: Pannelli laterali fissi */}
+      {!useMobileLayout && (
         <>
-          <Backdrop isOpen={true} onClose={handleRequestCloseSelection} />
-          <BottomSheet isOpen={true} onClose={handleRequestCloseSelection}>
+          {/* Pannello nuova annotazione a destra */}
+          {genericSelection && selection && !selectedAnnotation && (
             <SelectionPopup
               selection={genericSelection}
               onClose={clearSelection}
               createLocation={() => createLocation(selection)}
               handleCloseRef={selectionPopupHandleCloseRef}
             />
-          </BottomSheet>
-        </>
-      )}
+          )}
 
-      {/* Annotation Editor - Desktop/Mobile */}
-      {selectedAnnotation && !useMobileLayout && (
-        <div className="fixed right-0 top-16 z-20 h-[calc(100vh-4rem)] w-96 border-l bg-white shadow-xl">
-          <AnnotationEditor
-            annotation={selectedAnnotation}
-            onClose={() => setSelectedAnnotation(null)}
-            handleCloseRef={annotationEditorHandleCloseRef}
-          />
-        </div>
-      )}
-
-      {/* Annotation Editor - BottomSheet Mobile */}
-      {selectedAnnotation && useMobileLayout && (
-        <>
-          <Backdrop isOpen={true} onClose={handleRequestCloseEditor} />
-          <BottomSheet isOpen={true} onClose={handleRequestCloseEditor}>
+          {/* Pannello modifica annotazione a destra */}
+          {selectedAnnotation && (
             <AnnotationEditor
               annotation={selectedAnnotation}
               onClose={() => setSelectedAnnotation(null)}
               handleCloseRef={annotationEditorHandleCloseRef}
             />
-          </BottomSheet>
+          )}
+        </>
+      )}
+
+      {/* Mobile/Tablet: BottomSheet con backdrop */}
+      {useMobileLayout && (
+        <>
+          {/* Backdrop per chiudere il bottom sheet */}
+          <Backdrop
+            isOpen={(!!genericSelection && !!selection) || !!selectedAnnotation}
+            onClose={() => {
+              if (genericSelection && selection) {
+                handleRequestCloseSelection();
+              } else if (selectedAnnotation) {
+                handleRequestCloseEditor();
+              }
+            }}
+            zIndex={45}
+          />
+
+          {/* BottomSheet per nuova annotazione */}
+          {genericSelection && selection && !selectedAnnotation && (
+            <BottomSheet
+              isOpen={true}
+              onClose={handleRequestCloseSelection}
+              title="Nuova annotazione"
+              initialHeight="70vh"
+            >
+              <div className="p-4">
+                <SelectionPopup
+                  selection={genericSelection}
+                  onClose={clearSelection}
+                  createLocation={() => createLocation(selection)}
+                  handleCloseRef={selectionPopupHandleCloseRef}
+                />
+              </div>
+            </BottomSheet>
+          )}
+
+          {/* BottomSheet per modifica annotazione */}
+          {selectedAnnotation && (
+            <BottomSheet
+              isOpen={true}
+              onClose={handleRequestCloseEditor}
+              title="Modifica annotazione"
+              initialHeight="70vh"
+            >
+              <div className="p-4">
+                <AnnotationEditor
+                  annotation={selectedAnnotation}
+                  onClose={() => setSelectedAnnotation(null)}
+                  handleCloseRef={annotationEditorHandleCloseRef}
+                />
+              </div>
+            </BottomSheet>
+          )}
         </>
       )}
     </div>
