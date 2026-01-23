@@ -1,10 +1,50 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MainLayout } from '@/components/layout';
 import { DocumentViewer } from '@/components/reader';
 import { checkStorageAvailability } from '@/services/storage';
 
 function App() {
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
+  const lastTouchEndRef = useRef(0);
+
+  // Previeni zoom su dispositivi touch
+  useEffect(() => {
+    const handleGestureStart = (e: Event) => {
+      e.preventDefault();
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const now = Date.now();
+      if (now - lastTouchEndRef.current <= 300) {
+        e.preventDefault();
+      }
+      lastTouchEndRef.current = now;
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+      }
+    };
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=')) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('gesturestart', handleGestureStart);
+    document.addEventListener('touchend', handleTouchEnd, { passive: false });
+    document.addEventListener('wheel', handleWheel, { passive: false });
+    document.addEventListener('keydown', handleKeydown, { passive: false });
+
+    return () => {
+      document.removeEventListener('gesturestart', handleGestureStart);
+      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('wheel', handleWheel);
+      document.removeEventListener('keydown', handleKeydown);
+    };
+  }, []);
 
   useEffect(() => {
     // Rileva Safari iOS

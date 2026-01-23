@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 export interface TextSelectionData {
   text: string;
@@ -10,6 +10,7 @@ export interface TextSelectionData {
 
 export function useTextSelection(containerRef: React.RefObject<HTMLElement | null>) {
   const [selection, setSelection] = useState<TextSelectionData | null>(null);
+  const pendingSelectionRef = useRef<number | null>(null);
 
   const getSelectionContext = useCallback(
     (range: Range, contextLength: number = 50): string => {
@@ -37,11 +38,19 @@ export function useTextSelection(containerRef: React.RefObject<HTMLElement | nul
         currentOffset += node.length;
       }
 
-      // Se non abbiamo trovato l'offset, usa indexOf come fallback
+      // Se non abbiamo trovato l'offset, usa Range per calcolare la posizione esatta
       if (selectionStartOffset === -1) {
-        const index = textContent.indexOf(selectedText);
-        if (index === -1) return selectedText;
-        selectionStartOffset = index;
+        try {
+          const preRange = document.createRange();
+          preRange.setStart(container, 0);
+          preRange.setEnd(range.startContainer, range.startOffset);
+          selectionStartOffset = preRange.toString().length;
+        } catch {
+          // Fallback a indexOf se Range fallisce
+          const index = textContent.indexOf(selectedText);
+          if (index === -1) return selectedText;
+          selectionStartOffset = index;
+        }
       }
 
       const start = Math.max(0, selectionStartOffset - contextLength);
@@ -119,10 +128,21 @@ export function useTextSelection(containerRef: React.RefObject<HTMLElement | nul
   }, []);
 
   useEffect(() => {
-    const mouseHandler = (e: MouseEvent) => handleSelection(e);
-    const keyHandler = (e: KeyboardEvent) => handleSelection(e);
-    const touchHandler = (e: TouchEvent) => handleSelection(e);
-    const selectionHandler = (e: Event) => handleSelection(e as MouseEvent);
+    // Gate con requestAnimationFrame per evitare processamenti duplicati
+    const scheduleSelection = (e: Event) => {
+      if (pendingSelectionRef.current) {
+        cancelAnimationFrame(pendingSelectionRef.current);
+      }
+      pendingSelectionRef.current = requestAnimationFrame(() => {
+        pendingSelectionRef.current = null;
+        handleSelection(e as MouseEvent);
+      });
+    };
+
+    const mouseHandler = (e: MouseEvent) => scheduleSelection(e);
+    const keyHandler = (e: KeyboardEvent) => scheduleSelection(e);
+    const touchHandler = (e: TouchEvent) => handleSelection(e); // touch mantiene il delay interno
+    const selectionHandler = (e: Event) => scheduleSelection(e);
 
     // Ascolta sia eventi mouse che touch per supportare desktop e mobile
     document.addEventListener('mouseup', mouseHandler);
@@ -133,6 +153,9 @@ export function useTextSelection(containerRef: React.RefObject<HTMLElement | nul
     document.addEventListener('selectionchange', selectionHandler);
 
     return () => {
+      if (pendingSelectionRef.current) {
+        cancelAnimationFrame(pendingSelectionRef.current);
+      }
       document.removeEventListener('mouseup', mouseHandler);
       document.removeEventListener('keyup', keyHandler);
       document.removeEventListener('touchend', touchHandler);

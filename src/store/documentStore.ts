@@ -118,23 +118,15 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
 
   nextPage: () => {
     const { currentPage, totalPages } = get();
-    console.log('[documentStore] nextPage called - current:', currentPage, 'total:', totalPages);
     if (currentPage < totalPages) {
       set({ currentPage: currentPage + 1 });
-      console.log('[documentStore] nextPage - updated to:', currentPage + 1);
-    } else {
-      console.log('[documentStore] nextPage - blocked (already at last page)');
     }
   },
 
   prevPage: () => {
     const { currentPage } = get();
-    console.log('[documentStore] prevPage called - current:', currentPage);
     if (currentPage > 1) {
       set({ currentPage: currentPage - 1 });
-      console.log('[documentStore] prevPage - updated to:', currentPage - 1);
-    } else {
-      console.log('[documentStore] prevPage - blocked (already at first page)');
     }
   },
 

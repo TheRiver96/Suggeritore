@@ -1,6 +1,11 @@
 /**
  * Web Audio API Encoder per iOS compatibility
- * Questo encoder cattura audio usando Web Audio API e lo converte in WAV
+ * Questo encoder cattura audio usando Web Audio API e lo converte in WAV.
+ *
+ * NOTA: Usa ScriptProcessorNode che è deprecato in favore di AudioWorklet.
+ * Tuttavia AudioWorklet non è supportato su iOS WebKit, quindi ScriptProcessorNode
+ * rimane l'unica opzione per la registrazione audio su iOS.
+ * Riferimento: https://developer.mozilla.org/en-US/docs/Web/API/ScriptProcessorNode
  */
 
 export interface AudioEncoderConfig {
@@ -29,6 +34,7 @@ export class WebAudioEncoder {
     this.recordingStartTime = Date.now();
 
     // Crea AudioContext con sample rate specificato
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
       sampleRate: this.sampleRate,
     });

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { lockScroll, unlockScroll } from '@/utils/bodyScrollLock';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -47,13 +48,12 @@ export function BottomSheet({
   // Previeni scroll del body quando aperto
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+      lockScroll();
     }
-
     return () => {
-      document.body.style.overflow = '';
+      if (isOpen) {
+        unlockScroll();
+      }
     };
   }, [isOpen]);
 
@@ -75,7 +75,13 @@ export function BottomSheet({
     // Se trascina verso il basso, riduci l'altezza
     if (deltaY > 0) {
       const viewportHeight = window.innerHeight;
-      const currentHeightPx = parseFloat(initialHeight) / 100 * viewportHeight;
+      // Gestisci diverse unità di altezza (vh, px, %)
+      let currentHeightPx: number;
+      if (initialHeight.endsWith('vh') || initialHeight.endsWith('%')) {
+        currentHeightPx = (parseFloat(initialHeight) / 100) * viewportHeight;
+      } else {
+        currentHeightPx = parseFloat(initialHeight);
+      }
       const newHeight = Math.max(20, currentHeightPx - deltaY);
       setSheetHeight(`${(newHeight / viewportHeight) * 100}vh`);
     }

@@ -91,8 +91,7 @@ export function FileUploader({
       if (file) {
         try {
           handleFile(file);
-        } catch (error) {
-          console.error('Errore nella gestione del file:', error);
+        } catch {
           setError('Errore nel caricamento del file. Riprova.');
         }
       }

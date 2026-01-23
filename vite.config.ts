@@ -27,7 +27,6 @@ export default defineConfig({
       key: fs.existsSync('./localhost-key.pem') ? fs.readFileSync('./localhost-key.pem') : undefined,
       cert: fs.existsSync('./localhost.pem') ? fs.readFileSync('./localhost.pem') : undefined,
     } : undefined,
-    allowedHosts: ['acarpellous-phylacteried-rana.ngrok-free.dev']
-
+    allowedHosts: true,
   },
 })

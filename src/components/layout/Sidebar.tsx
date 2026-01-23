@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FolderIcon,
   ChatBubbleLeftEllipsisIcon,
@@ -36,59 +36,57 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   } = useDocumentStore();
 
   const annotationStore = useAnnotationStore();
-  const filteredAnnotations = selectFilteredAnnotations(annotationStore);
+  const filteredAnnotations = useMemo(
+    () => selectFilteredAnnotations(annotationStore),
+    [annotationStore.annotations, annotationStore.filterTags, annotationStore.searchQuery]
+  );
   const { setSelectedAnnotation, deleteAnnotation, searchQuery, setSearchQuery, highlightAnnotationTemporarily, setHighlightedAnnotationId } = annotationStore;
 
   useEffect(() => {
     loadDocuments();
   }, [loadDocuments]);
 
-  const handleFileSelect = async (file: File) => {
+  const handleFileSelect = useCallback(async (file: File) => {
     const doc = await addDocument(file);
     setCurrentDocument(doc);
     setActiveTab('documents');
-  };
+  }, [addDocument, setCurrentDocument]);
 
-  const handleDocumentClick = (doc: Document) => {
+  const handleDocumentClick = useCallback((doc: Document) => {
     setCurrentDocument(doc);
-    // Chiudi la sidebar su mobile dopo aver selezionato un documento
     if (!isDesktop) {
       onClose();
     }
-  };
+  }, [setCurrentDocument, isDesktop, onClose]);
 
-  const handleDeleteDocument = async (e: React.MouseEvent, docId: string) => {
+  const handleDeleteDocument = useCallback(async (e: React.MouseEvent, docId: string) => {
     e.stopPropagation();
     if (confirm('Sei sicuro di voler eliminare questo documento e tutte le sue annotazioni?')) {
       await removeDocument(docId);
     }
-  };
+  }, [removeDocument]);
 
-  const handleDeleteAnnotation = async (e: React.MouseEvent, annotationId: string) => {
+  const handleDeleteAnnotation = useCallback(async (e: React.MouseEvent, annotationId: string) => {
     e.stopPropagation();
     if (confirm('Sei sicuro di voler eliminare questa annotazione?')) {
       await deleteAnnotation(annotationId);
     }
-  };
+  }, [deleteAnnotation]);
 
-  const handleAnnotationClick = (annotation: typeof filteredAnnotations[0]) => {
-    // Se l'annotazione è su una pagina diversa, naviga a quella pagina
+  const handleAnnotationClick = useCallback((annotation: typeof filteredAnnotations[0]) => {
     if (annotation.location.page && annotation.location.page !== currentPage) {
       setCurrentPage(annotation.location.page);
-      // Evidenzia temporaneamente l'annotazione dopo il cambio pagina
       setTimeout(() => {
         highlightAnnotationTemporarily(annotation.id, 2500);
-      }, 600); // Aspetta che la pagina sia renderizzata
+      }, 600);
     } else {
-      // Stessa pagina: evidenzia subito
       highlightAnnotationTemporarily(annotation.id, 2500);
     }
     setSelectedAnnotation(annotation);
-    // Chiudi la sidebar su mobile dopo aver selezionato un'annotazione
     if (!isDesktop) {
       onClose();
     }
-  };
+  }, [currentPage, setCurrentPage, highlightAnnotationTemporarily, setSelectedAnnotation, isDesktop, onClose]);
 
   if (!isOpen) return null;
 

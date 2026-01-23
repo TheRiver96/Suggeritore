@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ReactReader, ReactReaderStyle } from 'react-reader';
-import type { Rendition, Contents } from 'epubjs';
+import type { Rendition, Contents, NavItem } from 'epubjs';
 import { useDocumentStore, useAnnotationStore } from '@/store';
 import { useBreakpoints } from '@/hooks';
 import { Backdrop, BottomSheet } from '@/components/common';
@@ -24,14 +24,21 @@ export function EPUBReader({ document }: EPUBReaderProps) {
   const { isMobile, isTablet } = useBreakpoints();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<string | number>(0);
   const [selection, setSelection] = useState<EpubSelection | null>(null);
   const [bookData, setBookData] = useState<ArrayBuffer | null>(null);
 
   const renditionRef = useRef<Rendition | null>(null);
-  const toc = useRef<any[]>([]);
+  const annotationsRef = useRef(annotations);
+  const toc = useRef<NavItem[]>([]);
 
   const useMobileLayout = isMobile || isTablet;
+
+  // Mantieni il ref sincronizzato con le annotazioni
+  useEffect(() => {
+    annotationsRef.current = annotations;
+  }, [annotations]);
 
   // Ref per accedere al metodo handleClose dei componenti figli
   const selectionPopupHandleCloseRef = useRef<(() => void) | null>(null);
@@ -76,8 +83,8 @@ export function EPUBReader({ document }: EPUBReaderProps) {
         await loadAnnotations(document.id);
 
         setIsLoading(false);
-      } catch (err) {
-        console.error('Errore caricamento EPUB:', err);
+      } catch {
+        setError('Impossibile caricare il file EPUB. Verifica che il file sia valido.');
         setIsLoading(false);
       }
     };
@@ -91,10 +98,9 @@ export function EPUBReader({ document }: EPUBReaderProps) {
       renditionRef.current = rendition;
 
       // Disabilita menu contestuale (tasto destro) nel contenuto EPUB
-      rendition.on('rendered', (section: any) => {
-        const contents = section.document as Document;
-        if (contents) {
-          contents.addEventListener('contextmenu', (e: Event) => {
+      rendition.on('rendered', (_section: unknown, view?: { document?: Document }) => {
+        if (view?.document) {
+          view.document.addEventListener('contextmenu', (e: Event) => {
             e.preventDefault();
           });
         }
@@ -115,8 +121,9 @@ export function EPUBReader({ document }: EPUBReaderProps) {
       });
 
       // Applica highlights alle annotazioni
-      if (annotations.length > 0) {
-        annotations.forEach((annotation) => {
+      const currentAnnotations = annotationsRef.current;
+      if (currentAnnotations.length > 0) {
+        currentAnnotations.forEach((annotation) => {
           if (annotation.location.cfi) {
             rendition.annotations.add(
               'highlight',
@@ -148,7 +155,7 @@ export function EPUBReader({ document }: EPUBReaderProps) {
       // Gestisci click su highlights (annotazioni esistenti)
       rendition.on('markClicked', (cfiRange: string) => {
         // Trova l'annotazione corrispondente al CFI
-        const clickedAnnotation = annotations.find((ann) => ann.location.cfi === cfiRange);
+        const clickedAnnotation = annotationsRef.current.find((ann) => ann.location.cfi === cfiRange);
 
         if (clickedAnnotation) {
           // Chiudi eventuale selezione aperta
@@ -160,12 +167,12 @@ export function EPUBReader({ document }: EPUBReaderProps) {
       });
 
       // Carica la TOC
-      rendition.book.loaded.navigation.then((navigation: any) => {
+      rendition.book.loaded.navigation.then((navigation) => {
         toc.current = navigation.toc;
         setTotalPages(navigation.toc.length);
       });
     },
-    [annotations, setTotalPages, setSelectedAnnotation]
+    [setTotalPages, setSelectedAnnotation]
   );
 
   // Aggiorna highlights quando le annotazioni cambiano
@@ -289,6 +296,22 @@ export function EPUBReader({ document }: EPUBReaderProps) {
       transition: undefined, // Rimuovi transizione quando le frecce sono nascoste
     },
   };
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center p-6">
+          <p className="text-red-600 mb-3">{error}</p>
+          <button
+            onClick={() => setError(null)}
+            className="px-4 py-2 text-sm bg-teatro-600 text-white rounded-lg hover:bg-teatro-700 transition-colors"
+          >
+            Riprova
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!bookData) {
     return (

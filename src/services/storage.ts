@@ -39,7 +39,6 @@ export async function checkStorageAvailability(): Promise<{
     const driver = documentsStore.driver();
     return { available: true, driver };
   } catch (error) {
-    console.error('Storage non disponibile:', error);
     return {
       available: false,
       driver: 'none',
@@ -60,8 +59,7 @@ export async function saveDocument(document: Document): Promise<void> {
       // localforage gestirà la serializzazione
     };
     await documentsStore.setItem(document.id, documentToSave);
-  } catch (error) {
-    console.error('Errore nel salvataggio documento:', error);
+  } catch {
     throw new Error('Impossibile salvare il documento. Verifica lo spazio disponibile.');
   }
 }
@@ -101,14 +99,12 @@ export async function saveAnnotation(annotation: Annotation): Promise<void> {
     await saveAudioBlob(annotation.audioMemo.id, annotation.audioMemo.blob);
   }
 
-  // Salva l'annotazione senza il blob (solo riferimento)
-  const annotationToSave: Annotation = {
-    ...annotation,
-    audioMemo: annotation.audioMemo
-      ? {
-          ...annotation.audioMemo,
-          blob: null as unknown as Blob, // Non salvare il blob nell'annotazione
-        }
+  // Salva l'annotazione senza il blob (solo riferimento ID)
+  const { audioMemo, ...rest } = annotation;
+  const annotationToSave = {
+    ...rest,
+    audioMemo: audioMemo
+      ? { id: audioMemo.id, duration: audioMemo.duration, mimeType: audioMemo.mimeType }
       : undefined,
   };
   await annotationsStore.setItem(annotation.id, annotationToSave);
@@ -137,15 +133,17 @@ export async function getAnnotationsByDocument(documentId: string): Promise<Anno
     }
   });
 
-  // Recupera i blob audio per ogni annotazione
-  for (const annotation of annotations) {
-    if (annotation.audioMemo) {
-      const blob = await getAudioBlob(annotation.audioMemo.id);
-      if (blob) {
-        annotation.audioMemo.blob = blob;
-      }
-    }
-  }
+  // Recupera i blob audio in parallelo
+  await Promise.all(
+    annotations
+      .filter((a) => a.audioMemo)
+      .map(async (annotation) => {
+        const blob = await getAudioBlob(annotation.audioMemo!.id);
+        if (blob) {
+          annotation.audioMemo!.blob = blob;
+        }
+      })
+  );
 
   return annotations.sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -158,15 +156,17 @@ export async function getAllAnnotations(): Promise<Annotation[]> {
     annotations.push(value);
   });
 
-  // Recupera i blob audio per ogni annotazione
-  for (const annotation of annotations) {
-    if (annotation.audioMemo) {
-      const blob = await getAudioBlob(annotation.audioMemo.id);
-      if (blob) {
-        annotation.audioMemo.blob = blob;
-      }
-    }
-  }
+  // Recupera i blob audio in parallelo
+  await Promise.all(
+    annotations
+      .filter((a) => a.audioMemo)
+      .map(async (annotation) => {
+        const blob = await getAudioBlob(annotation.audioMemo!.id);
+        if (blob) {
+          annotation.audioMemo!.blob = blob;
+        }
+      })
+  );
 
   return annotations.sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -196,8 +196,7 @@ export async function saveAudioBlob(id: string, blob: Blob): Promise<void> {
     }
 
     await audioStore.setItem(id, blob);
-  } catch (error) {
-    console.error('Errore nel salvataggio audio blob:', error);
+  } catch {
     throw new Error('Impossibile salvare l\'audio. Verifica lo spazio disponibile.');
   }
 }

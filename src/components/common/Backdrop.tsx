@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { lockScroll, unlockScroll } from '@/utils/bodyScrollLock';
 
 interface BackdropProps {
   isOpen: boolean;
@@ -21,13 +22,12 @@ export function Backdrop({ isOpen, onClose, zIndex = 40, opacity = 0.5 }: Backdr
   // Previeni scroll del body quando il backdrop è aperto
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+      lockScroll();
     }
-
     return () => {
-      document.body.style.overflow = '';
+      if (isOpen) {
+        unlockScroll();
+      }
     };
   }, [isOpen]);
 

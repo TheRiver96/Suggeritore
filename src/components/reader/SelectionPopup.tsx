@@ -83,7 +83,6 @@ export function SelectionPopup({
     const finalDocumentId = documentId || currentDocument?.id;
 
     if (!finalDocumentId) {
-      console.error('documentId non disponibile');
       return;
     }
 

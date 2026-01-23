@@ -17,7 +17,8 @@
 
 ### 2. Funzionalità Core
 
-- [ ] **Test selezione testo in EPUB**
+- [ ] **Test selezione testo in EPUB*
+*
   - Selezionare testo nel viewer EPUB
   - Verificare che appaia il popup di selezione
   - Controllare che il testo selezionato sia corretto

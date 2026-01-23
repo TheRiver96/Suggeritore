@@ -54,7 +54,7 @@ export function useAudioPlayer(blob: Blob | null): UseAudioPlayerReturn {
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
-      if (urlRef.current && urlRef.current.startsWith('blob:')) {
+      if (urlRef.current) {
         URL.revokeObjectURL(urlRef.current);
       }
     };
@@ -68,14 +68,14 @@ export function useAudioPlayer(blob: Blob | null): UseAudioPlayerReturn {
         return;
       }
 
-      // Se già caricato, non ricaricare
+      // Se già caricato con lo stesso blob, non ricaricare
       if (isLoaded && blobRef.current === blob) {
         resolve();
         return;
       }
 
       // Revoca URL precedente
-      if (urlRef.current && urlRef.current.startsWith('blob:')) {
+      if (urlRef.current) {
         URL.revokeObjectURL(urlRef.current);
         urlRef.current = null;
       }
@@ -83,23 +83,22 @@ export function useAudioPlayer(blob: Blob | null): UseAudioPlayerReturn {
       setIsLoaded(false);
       blobRef.current = blob;
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (audioRef.current && typeof reader.result === 'string') {
-          urlRef.current = reader.result;
-          audioRef.current.src = reader.result;
+      const url = URL.createObjectURL(blob);
+      urlRef.current = url;
+      audioRef.current.src = url;
 
-          const onCanPlay = () => {
-            audioRef.current?.removeEventListener('canplay', onCanPlay);
-            setIsLoaded(true);
-            resolve();
-          };
-          audioRef.current.addEventListener('canplay', onCanPlay);
-          audioRef.current.load();
-        }
+      const onCanPlay = () => {
+        audioRef.current?.removeEventListener('canplay', onCanPlay);
+        setIsLoaded(true);
+        resolve();
       };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(blob);
+      const onError = () => {
+        audioRef.current?.removeEventListener('error', onError);
+        reject(new Error('Failed to load audio'));
+      };
+      audioRef.current.addEventListener('canplay', onCanPlay);
+      audioRef.current.addEventListener('error', onError);
+      audioRef.current.load();
     });
   }, [blob, isLoaded]);
 
@@ -128,10 +127,11 @@ export function useAudioPlayer(blob: Blob | null): UseAudioPlayerReturn {
 
   const seek = useCallback((time: number) => {
     if (audioRef.current && isLoaded) {
-      audioRef.current.currentTime = time;
-      setCurrentTime(time);
+      const clampedTime = Math.max(0, Math.min(time, duration));
+      audioRef.current.currentTime = clampedTime;
+      setCurrentTime(clampedTime);
     }
-  }, [isLoaded]);
+  }, [isLoaded, duration]);
 
   const setVolume = useCallback((volume: number) => {
     if (audioRef.current) {

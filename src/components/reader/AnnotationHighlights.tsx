@@ -31,6 +31,7 @@ export function AnnotationHighlights({
 
   const [highlights, setHighlights] = useState<HighlightRect[]>([]);
   const annotationsRef = useRef(annotations);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Aggiorna il ref quando cambiano le annotazioni
   useEffect(() => {
@@ -90,23 +91,29 @@ export function AnnotationHighlights({
       return;
     }
 
+    // Funzione debounced per evitare timeout multipli
+    const debouncedCalculate = (delay: number) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(calculateHighlights, delay);
+    };
+
     // Attendi che il text layer sia completamente renderizzato
-    const timeout = setTimeout(calculateHighlights, 500);
+    debouncedCalculate(500);
 
     // Osserva cambiamenti nel DOM per rilevare quando il text layer è pronto
     const observer = new MutationObserver(() => {
-      setTimeout(calculateHighlights, 100);
+      debouncedCalculate(100);
     });
     observer.observe(container, { childList: true, subtree: true });
 
     // Listener per resize
     const handleResize = () => {
-      setTimeout(calculateHighlights, 100);
+      debouncedCalculate(100);
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
-      clearTimeout(timeout);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       observer.disconnect();
       window.removeEventListener('resize', handleResize);
     };
@@ -373,8 +380,7 @@ function findTextRects(textLayer: HTMLElement, searchText: string, textContext?:
         rangeSet = true;
       }
       range.setEnd(textNode, localEnd);
-    } catch (e) {
-      console.warn('[findTextRects] Errore setRange:', e);
+    } catch {
       continue;
     }
   }

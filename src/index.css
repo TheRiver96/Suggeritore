@@ -23,13 +23,21 @@ body {
   overscroll-behavior: none; /* Previene elastic scroll */
 }
 
-/* Previene zoom su mobile */
-* {
-  -webkit-user-select: none; /* Previene selezione accidentale */
-  -webkit-touch-callout: none; /* Previene menu contestuale iOS */
+/* Previene selezione accidentale su elementi UI */
+button,
+nav,
+aside,
+header,
+[role="button"],
+label,
+.sidebar,
+.bottom-sheet {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
-/* Abilita selezione solo dove necessario */
+/* Garantisci selezione nel contenuto testuale */
 input,
 textarea,
 [contenteditable="true"],
