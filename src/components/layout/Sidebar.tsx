@@ -5,11 +5,13 @@ import {
   TagIcon,
   TrashIcon,
   DocumentIcon,
+  XMarkIcon,
+  FunnelIcon,
 } from '@heroicons/react/24/outline';
 import { useDocumentStore, useAnnotationStore, selectFilteredAnnotations } from '@/store';
 import { FileUploader } from '@/components/common';
 import { formatDateShort, formatDuration } from '@/utils';
-import { useBreakpoints } from '@/hooks';
+import { useBreakpoints, useDebouncedValue, useAllTags } from '@/hooks';
 import type { Document } from '@/types';
 
 type SidebarTab = 'documents' | 'annotations';
@@ -21,6 +23,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<SidebarTab>('documents');
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
   const { isDesktop } = useBreakpoints();
 
   const {
@@ -40,7 +43,36 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     () => selectFilteredAnnotations(annotationStore),
     [annotationStore.annotations, annotationStore.filterTags, annotationStore.searchQuery]
   );
-  const { setSelectedAnnotation, deleteAnnotation, searchQuery, setSearchQuery, highlightAnnotationTemporarily, setHighlightedAnnotationId } = annotationStore;
+  const { setSelectedAnnotation, deleteAnnotation, setSearchQuery, filterTags, setFilterTags, highlightAnnotationTemporarily, setHighlightedAnnotationId } = annotationStore;
+
+  // Tag con conteggio per il filtro
+  const allTags = useAllTags();
+
+  // Debounce della ricerca
+  const debouncedSearchQuery = useDebouncedValue(localSearchQuery, 300);
+
+  // Aggiorna lo store quando cambia il valore debounced
+  useEffect(() => {
+    setSearchQuery(debouncedSearchQuery);
+  }, [debouncedSearchQuery, setSearchQuery]);
+
+  // Toggle tag nel filtro
+  const handleToggleTagFilter = useCallback((tag: string) => {
+    if (filterTags.includes(tag)) {
+      setFilterTags(filterTags.filter((t) => t !== tag));
+    } else {
+      setFilterTags([...filterTags, tag]);
+    }
+  }, [filterTags, setFilterTags]);
+
+  // Pulisci tutti i filtri
+  const handleClearFilters = useCallback(() => {
+    setFilterTags([]);
+    setLocalSearchQuery('');
+  }, [setFilterTags]);
+
+  // Controlla se ci sono filtri attivi
+  const hasActiveFilters = filterTags.length > 0 || localSearchQuery.trim() !== '';
 
   useEffect(() => {
     loadDocuments();
@@ -188,13 +220,66 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {activeTab === 'annotations' && (
           <div className="space-y-4">
             {/* Search */}
-            <input
-              type="text"
-              placeholder="Cerca nelle annotazioni..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teatro-500 focus:border-transparent"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Cerca nelle annotazioni..."
+                value={localSearchQuery}
+                onChange={(e) => setLocalSearchQuery(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teatro-500 focus:border-transparent pr-8"
+              />
+              {localSearchQuery && (
+                <button
+                  onClick={() => setLocalSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Cancella ricerca"
+                >
+                  <XMarkIcon className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Tag Filters */}
+            {allTags.length > 0 && currentDocument && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1 text-xs font-medium text-gray-500">
+                    <FunnelIcon className="w-3.5 h-3.5" />
+                    <span>Filtra per tag</span>
+                  </div>
+                  {hasActiveFilters && (
+                    <button
+                      onClick={handleClearFilters}
+                      className="text-xs text-teatro-600 hover:text-teatro-700 hover:underline transition-colors"
+                    >
+                      Pulisci filtri
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {allTags.map(({ tag, count }) => {
+                    const isActive = filterTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        onClick={() => handleToggleTagFilter(tag)}
+                        className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full transition-all duration-150 ${
+                          isActive
+                            ? 'bg-teatro-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        <TagIcon className="w-3 h-3" />
+                        <span>{tag}</span>
+                        <span className={`text-[10px] ${isActive ? 'text-teatro-200' : 'text-gray-400'}`}>
+                          ({count})
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {!currentDocument && (
               <p className="text-center text-gray-500 text-sm py-4">
