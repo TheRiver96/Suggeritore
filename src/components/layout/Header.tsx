@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Bars3Icon,
   DocumentTextIcon,
@@ -5,18 +6,26 @@ import {
   ChevronRightIcon,
   MagnifyingGlassMinusIcon,
   MagnifyingGlassPlusIcon,
+  ArrowsRightLeftIcon,
 } from '@heroicons/react/24/outline';
 import { useDocumentStore } from '@/store';
 import { useBreakpoints } from '@/hooks';
+import { ExportImportModal } from '@/components/common';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
 }
 
 export function Header({ onToggleSidebar }: HeaderProps) {
-  const { currentDocument, currentPage, totalPages, zoom, setCurrentPage, setZoom, prevPage, nextPage } =
+  const [isExportImportOpen, setIsExportImportOpen] = useState(false);
+  const { currentDocument, currentPage, totalPages, zoom, setCurrentPage, setZoom, prevPage, nextPage, loadDocuments } =
     useDocumentStore();
   const { isMobile } = useBreakpoints();
+
+  const handleImportComplete = () => {
+    // Ricarica i documenti dopo l'import
+    loadDocuments();
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-2 sm:px-4 shadow-sm">
@@ -118,8 +127,25 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         </div>
       )}
 
+      {/* Export/Import button - sempre visibile */}
+      <button
+        onClick={() => setIsExportImportOpen(true)}
+        className="p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 ease-in-out hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
+        aria-label="Esporta/Importa"
+        title="Esporta/Importa"
+      >
+        <ArrowsRightLeftIcon className="w-5 h-5 text-gray-600 transition-transform duration-200" />
+      </button>
+
       {/* Placeholder when no document */}
       {!currentDocument && <div className="w-12 sm:w-24" />}
+
+      {/* Export/Import Modal */}
+      <ExportImportModal
+        isOpen={isExportImportOpen}
+        onClose={() => setIsExportImportOpen(false)}
+        onImportComplete={handleImportComplete}
+      />
     </header>
   );
 }

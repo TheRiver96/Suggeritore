@@ -3,7 +3,7 @@ import { MicrophoneIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Button, Modal, ConfirmModal, TagInput, ColorSelector } from '@/components/common';
 import { VoiceRecorder } from '@/components/audio/VoiceRecorder';
 import { useAnnotationStore, useDocumentStore } from '@/store';
-import { useBreakpoints } from '@/hooks';
+import { useBreakpoints, useTagNames } from '@/hooks';
 import { DEFAULT_ANNOTATION_COLORS } from '@/types/annotation';
 import type { TextSelectionData } from '@/hooks/useTextSelection';
 import type { AudioMemo, AnnotationLocation } from '@/types';
@@ -39,6 +39,7 @@ export function SelectionPopup({
   const { createAnnotation } = useAnnotationStore();
   const { isMobile, isTablet } = useBreakpoints();
   const useMobileLayout = isMobile || isTablet;
+  const existingTags = useTagNames();
 
   // Rileva se ci sono modifiche (qualsiasi campo compilato)
   const hasChanges = useMemo(() => {
@@ -185,7 +186,7 @@ export function SelectionPopup({
 
         {/* Tags */}
         <div className="mb-4">
-          <TagInput tags={tags} onTagsChange={setTags} />
+          <TagInput tags={tags} onTagsChange={setTags} existingTags={existingTags} />
         </div>
 
         {/* Notes */}

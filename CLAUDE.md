@@ -1,6 +1,6 @@
 # Suggeritore - App per lo Studio di Copioni Teatrali
 
-**Versione**: 1.2.0
+**Versione**: 1.4.0
 
 ## Obiettivo del Progetto
 
@@ -443,10 +443,28 @@ Claude Code deve:
   - Navigazione affidabile tra sezioni con flow paginated
   - Controlli zoom tramite fontSize scaling
   - Layout responsive (desktop + mobile BottomSheet)
-- [ ] Sistema Tag avanzato con autocomplete
-- [ ] Note testuali edit
-- [ ] Ricerca avanzata
-- [ ] Export/Import JSON
+- [x] Sistema Tag avanzato con autocomplete (completato il 2026-01-27)
+  - Dropdown suggerimenti durante digitazione
+  - Tag ordinati per frequenza d'uso
+  - Navigazione con frecce e selezione con Enter
+  - Filtro tag nella sidebar con chip cliccabili
+  - Multi-selezione filtri tag
+  - Conteggio annotazioni per tag
+- [x] Note testuali edit (gia implementato in Fase 1)
+  - Modifica note in AnnotationEditor
+  - Display note in AnnotationCard e sidebar
+- [x] Ricerca avanzata (completato il 2026-01-27)
+  - Debouncing 300ms per performance
+  - Ricerca full-text in testo, note e tag
+  - Pulsante clear per cancellare ricerca
+- [x] Export/Import JSON (completato il 2026-01-27)
+  - Export completo o solo documento corrente
+  - Opzione inclusione memo audio (base64)
+  - Stima dimensione file prima dell'export
+  - Import con validazione file
+  - Preview statistiche prima dell'import
+  - Gestione conflitti (skip duplicati)
+  - Modal accessibile da header
 
 ### Fase 3: Features Avanzate (opzionale)
 - [ ] Visualizzazione Waveform
@@ -780,6 +798,53 @@ Claude Code deve:
   - **SOLUZIONE**: Nessuna azione necessaria. I warning possono essere ignorati o nascosti tramite filtri console del browser
   - **RISULTATO**: ✅ L'app funziona correttamente nonostante i warning nella console
 
+### 2026-01-27 - Completamento Fase 2
+- **Implementato sistema Tag avanzato con autocomplete:**
+  - Nuovo hook `useAllTags` per recuperare tutti i tag con conteggio frequenza
+  - Nuovo hook `useDebouncedValue` per debouncing generico
+  - Aggiornato `TagInput` con dropdown suggerimenti
+  - Navigazione keyboard (frecce su/giu, Enter, Escape)
+  - Tag ordinati per frequenza d'uso (piu usati prima)
+  - Filtro tag nella Sidebar con chip cliccabili multi-selezione
+  - Badge conteggio annotazioni per tag
+  - Pulsante "Pulisci filtri" quando filtri attivi
+- **Implementata ricerca avanzata:**
+  - Debouncing 300ms sulla ricerca per performance
+  - Ricerca full-text in testo selezionato, note e tag
+  - Pulsante X per cancellare rapidamente la ricerca
+- **Implementato Export/Import JSON:**
+  - Nuovo servizio `exportService.ts` con:
+    - Export tutti i documenti o solo documento corrente
+    - Opzione inclusione memo audio (conversione blob → base64)
+    - Stima dimensione file prima dell'export
+    - Download automatico con nome file timestamp
+  - Nuovo servizio `importService.ts` con:
+    - Validazione struttura file JSON
+    - Verifica versione compatibile
+    - Preview statistiche prima dell'import
+    - Conversione base64 → blob per audio
+    - Gestione conflitti (skip ID duplicati)
+  - Nuovo componente `ExportImportModal` con:
+    - Due tab: Export e Import
+    - Drag & drop per selezione file
+    - Progress e feedback visivo
+    - Risultato import con conteggi
+  - Pulsante export/import nell'Header (sempre visibile)
+- **File creati:**
+  - `src/hooks/useDebouncedValue.ts`
+  - `src/hooks/useAllTags.ts`
+  - `src/services/exportService.ts`
+  - `src/services/importService.ts`
+  - `src/components/common/ExportImportModal.tsx`
+- **File modificati:**
+  - `src/hooks/index.ts` - Export nuovi hooks
+  - `src/components/common/TagInput.tsx` - Autocomplete dropdown
+  - `src/components/common/index.ts` - Export ExportImportModal
+  - `src/components/annotations/AnnotationEditor.tsx` - Passa existingTags
+  - `src/components/reader/SelectionPopup.tsx` - Passa existingTags
+  - `src/components/layout/Sidebar.tsx` - Tag filter chips, debounced search
+  - `src/components/layout/Header.tsx` - Pulsante export/import
+
 ### Dipendenze Aggiunte
 - `uuid` - Generazione ID univoci
 - `react-pdf` v10 - Visualizzazione PDF
@@ -832,12 +897,15 @@ npm run preview -- --base /Suggeritore/
 2. ✅ Implementare interfaccia mobile-responsive
 3. ✅ Implementare registrazione audio iOS con Web Audio API
 4. ✅ Implementare supporto EPUB con react-reader
-5. Testare EPUB su dispositivi mobile reali
-6. Implementare navigazione a annotazione da sidebar (click su annotazione in lista)
-7. (Opzionale) Aggiungere dropdown Table of Contents per EPUB
-8. Aggiungere sistema tag con autocomplete
-9. Implementare export/import annotazioni
-10. (Opzionale) Ottimizzare encoder audio con MP3/Opus per ridurre dimensione file
+5. ✅ Aggiungere sistema tag con autocomplete
+6. ✅ Implementare export/import annotazioni
+7. Testare EPUB su dispositivi mobile reali
+8. (Opzionale) Aggiungere dropdown Table of Contents per EPUB
+9. (Opzionale) Ottimizzare encoder audio con MP3/Opus per ridurre dimensione file
+10. (Opzionale) Fase 3 - Visualizzazione Waveform
+11. (Opzionale) Fase 3 - PWA per uso offline
+12. (Opzionale) Fase 3 - Modalita Prova/Rehearsal
+13. (Opzionale) Fase 3 - Statistiche di studio
 
 ## Come Avviare
 

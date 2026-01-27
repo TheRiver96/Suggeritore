@@ -4,7 +4,7 @@ import { Button, Modal, ConfirmModal, TagInput, ColorSelector } from '@/componen
 import { VoiceRecorder } from '@/components/audio/VoiceRecorder';
 import { AudioPlayer } from '@/components/audio/AudioPlayer';
 import { useAnnotationStore } from '@/store';
-import { useBreakpoints } from '@/hooks';
+import { useBreakpoints, useTagNames } from '@/hooks';
 import type { Annotation, AudioMemo } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -29,6 +29,7 @@ export function AnnotationEditor({ annotation, onClose, handleCloseRef }: Annota
   const { updateAnnotation } = useAnnotationStore();
   const { isMobile, isTablet } = useBreakpoints();
   const useMobileLayout = isMobile || isTablet;
+  const existingTags = useTagNames();
 
   // Ref per tenere traccia dell'ID corrente
   const currentAnnotationIdRef = useRef(annotation.id);
@@ -226,7 +227,7 @@ export function AnnotationEditor({ annotation, onClose, handleCloseRef }: Annota
 
         {/* Tags */}
         <div className="mb-4">
-          <TagInput tags={tags} onTagsChange={setTags} />
+          <TagInput tags={tags} onTagsChange={setTags} existingTags={existingTags} />
         </div>
 
         {/* Notes */}
